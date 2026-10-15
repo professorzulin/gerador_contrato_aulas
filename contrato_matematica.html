@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerador de Contrato — Aulas Particulares de Matemática</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            serif: ['"Libre Baskerville"', 'Georgia', 'serif']
+          },
+          colors: {
+            navy: {
+              50: '#f2f6fc',
+              100: '#e1ebf8',
+              600: '#1e4b8f',
+              700: '#183a6c',
+              800: '#122b52',
+              900: '#0c1d38'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    .contract-paper {
+      font-family: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
+      line-height: 1.55;
+      color: #1e293b;
+    }
+    .field-highlight {
+      background-color: rgba(24, 58, 108, 0.07);
+      border-bottom: 1px dashed rgba(24, 58, 108, 0.35);
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    @media print {
+      body {
+        background: #ffffff !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      .field-highlight {
+        background-color: transparent !important;
+        border-bottom: none !important;
+        padding: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 hidden no-print">
+    <div id="toastBox" class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg bg-navy-800 text-white text-sm font-medium border border-navy-600">
+      <span id="toastIcon" class="w-5 h-5 flex items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">✓</span>
+      <span id="toastMessage">Ação concluída com sucesso!</span>
+    </div>
+  </div>
+
+  <!-- Modal Código LaTeX -->
+  <div id="latexModal" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
+      <div class="px-6 py-4 bg-navy-700 text-white flex items-center justify-between">
+        <div>
+          <h3 class="font-semibold text-base">Código-Fonte LaTeX (.tex) Preenchido</h3>
+          <p class="text-xs text-slate-200">Gerado automaticamente com todas as informações do formulário</p>
+        </div>
+        <button id="btnCloseLatexModal" type="button" class="text-slate-200 hover:text-white px-2.5 py-1 rounded-lg text-sm font-semibold">Fechar ✕</button>
+      </div>
+      <div class="p-4 flex-1 overflow-auto bg-slate-950">
+        <pre id="latexCodeOutput" class="text-xs text-emerald-300 font-mono whitespace-pre-wrap break-words"></pre>
+      </div>
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-end gap-2">
+        <button id="btnCopyLatex" type="button" class="px-4 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition">
+          Copiar Código LaTeX
+        </button>
+        <button id="btnDownloadLatex" type="button" class="px-4 py-2 rounded-lg bg-navy-700 hover:bg-navy-800 text-white text-xs font-semibold transition">
+          Baixar Arquivo .tex
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Header Bar -->
+  <header class="bg-navy-800 text-white border-b border-navy-900 sticky top-0 z-30 shadow-md no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center font-serif font-bold text-lg text-amber-300">
+          ∑
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight">Gerador de Contrato — Aulas de Matemática</h1>
+          <p class="text-xs text-slate-300">Preencha os dados, escolha as opções e baixe o PDF pronto para assinar</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnFillDemo" type="button" class="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition border border-white/15">
+          Preencher Exemplo
+        </button>
+        <button id="btnOpenLatex" type="button" class="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition border border-white/15">
+          Ver Código LaTeX
+        </button>
+        <button id="btnPrintContract" type="button" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-white text-navy-800 text-xs font-semibold transition">
+          Imprimir
+        </button>
+        <button id="btnGeneratePdfTop" type="button" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-sm transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 8l-3-3m3 3l3-3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1"/>
+          </svg>
+          <span>Gerar e Baixar PDF</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- Left Column: Interactive Form (7 cols on lg) -->
+    <section class="lg:col-span-6 xl:col-span-6 space-y-5 no-print">
+
+      <!-- Card 1: Opções Principais do Contrato (Chaves Lógicas) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-5 py-3.5 bg-navy-50 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-navy-700 text-white text-xs font-bold flex items-center justify-center">1</span>
+            <h2 class="font-semibold text-sm text-navy-900">Configurações Principais do Contrato</h2>
+          </div>
+          <span class="text-[11px] font-medium text-navy-700 bg-navy-100 px-2.5 py-0.5 rounded-full">Adaptação Automática</span>
+        </div>
+
+        <div class="p-5 space-y-5">
+          <!-- Opção 1: Aluno Menor ou Maior -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+              1.1. O(A) Aluno(a) é menor de 18 anos?
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button type="button" id="optMenorSim" class="p-3 rounded-xl border-2 text-left transition flex items-start gap-2.5 border-navy-700 bg-navy-50/70">
+                <span id="dotMenorSim" class="w-4 h-4 mt-0.5 rounded-full border-2 border-navy-700 bg-navy-700 flex-shrink-0"></span>
+                <div>
+                  <div class="text-xs font-bold text-navy-900">Menor de Idade (Com Responsável)</div>
+                  <div class="text-[11px] text-slate-600 mt-0.5">O responsável assina como Contratante e o nome do(a) aluno(a) entra como beneficiário(a).</div>
+                </div>
+              </button>
+              <button type="button" id="optMenorNao" class="p-3 rounded-xl border-2 text-left transition flex items-start gap-2.5 border-slate-200 hover:border-slate-300 bg-white">
+                <span id="dotMenorNao" class="w-4 h-4 mt-0.5 rounded-full border-2 border-slate-300 flex-shrink-0"></span>
+                <div>
+                  <div class="text-xs font-bold text-slate-800">Maior de Idade (Próprio Aluno)</div>
+                  <div class="text-[11px] text-slate-600 mt-0.5">O(A) próprio(a) aluno(a) assina o contrato diretamente como Contratante.</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Opção 2: Modalidade Presencial ou Online -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+              1.2. Modalidade de Realização da(s) Aula(s)
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button type="button" id="optModOnline" class="p-3 rounded-xl border-2 text-left transition flex items-start gap-2.5 border-navy-700 bg-navy-50/70">
+                <span id="dotModOnline" class="w-4 h-4 mt-0.5 rounded-full border-2 border-navy-700 bg-navy-700 flex-shrink-0"></span>
+                <div>
+                  <div class="text-xs font-bold text-navy-900">Modalidade Online (Remota)</div>
+                  <div class="text-[11px] text-slate-600 mt-0.5">Aulas ao vivo por videoconferência com cláusula de reposição por falha técnica.</div>
+                </div>
+              </button>
+              <button type="button" id="optModPresencial" class="p-3 rounded-xl border-2 text-left transition flex items-start gap-2.5 border-slate-200 hover:border-slate-300 bg-white">
+                <span id="dotModPresencial" class="w-4 h-4 mt-0.5 rounded-full border-2 border-slate-300 flex-shrink-0"></span>
+                <div>
+                  <div class="text-xs font-bold text-slate-800">Modalidade Presencial</div>
+                  <div class="text-[11px] text-slate-600 mt-0.5">Aulas realizadas no endereço indicado, com regras de ambiente de estudo.</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Opção 3: Aula Única ou Conjunto de Aulas -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+              1.3. Quantidade de Aulas e Regime de Pagamento
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button type="button" id="optRegimeUnica" class="p-3 rounded-xl border-2 text-left transition flex items-start gap-2.5 border-slate-200 hover:border-slate-300 bg-white">
+                <span id="dotRegimeUnica" class="w-4 h-4 mt-0.5 rounded-full border-2 border-slate-300 flex-shrink-0"></span>
+                <div>
+                  <div class="text-xs font-bold text-slate-800">Uma Única Aula (Valor Único)</div>
+                  <div class="text-[11px] text-slate-600 mt-0.5">Contrato no singular para aula avulsa, com pagamento em parcela única.</div>
+                </div>
+              </button>
+              <button type="button" id="optRegimePacote" class="p-3 rounded-xl border-2 text-left transition flex items-start gap-2.5 border-navy-700 bg-navy-50/70">
+                <span id="dotRegimePacote" class="w-4 h-4 mt-0.5 rounded-full border-2 border-navy-700 bg-navy-700 flex-shrink-0"></span>
+                <div>
+                  <div class="text-xs font-bold text-navy-900">Várias Aulas (Pacote / Parcelado)</div>
+                  <div class="text-[11px] text-slate-600 mt-0.5">Especifica a quantidade de aulas, o valor total integral e o número de parcelas.</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Seus Dados (Professor / Contratado) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-5 py-3.5 bg-navy-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-navy-700 text-white text-xs font-bold flex items-center justify-center">2</span>
+            <h2 class="font-semibold text-sm text-navy-900">Seus Dados — Professor(a) / Contratado(a)</h2>
+          </div>
+          <button id="btnSaveProf" type="button" class="text-xs font-semibold text-navy-700 hover:text-navy-900 bg-white px-2.5 py-1 rounded-lg border border-slate-300 shadow-2xs transition">
+            Salvar Meus Dados Padrão
+          </button>
+        </div>
+
+        <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div class="sm:col-span-2">
+            <label for="profNome" class="block text-xs font-medium text-slate-700 mb-1">Nome Completo do(a) Professor(a)</label>
+            <input id="profNome" type="text" placeholder="Ex.: Prof. Carlos Eduardo Almeida" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+          <div>
+            <label for="profNacionalidade" class="block text-xs font-medium text-slate-700 mb-1">Nacionalidade</label>
+            <input id="profNacionalidade" type="text" value="brasileiro(a)" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+          <div>
+            <label for="profEstadoCivil" class="block text-xs font-medium text-slate-700 mb-1">Estado Civil</label>
+            <input id="profEstadoCivil" type="text" placeholder="Ex.: solteiro(a), casado(a)" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+          <div>
+            <label for="profProfissao" class="block text-xs font-medium text-slate-700 mb-1">Profissão</label>
+            <input id="profProfissao" type="text" value="Professor(a) de Matemática" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+          <div>
+            <label for="profRG" class="block text-xs font-medium text-slate-700 mb-1">RG e Órgão Expedidor</label>
+            <input id="profRG" type="text" placeholder="Ex.: 12.345.678-9 SSP/PR" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+          <div>
+            <label for="profCPF" class="block text-xs font-medium text-slate-700 mb-1">CPF</label>
+            <input id="profCPF" type="text" maxlength="14" placeholder="000.000.000-00" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+          <div>
+            <label for="profTelefone" class="block text-xs font-medium text-slate-700 mb-1">Telefone / WhatsApp</label>
+            <input id="profTelefone" type="text" maxlength="15" placeholder="(44) 99999-9999" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+          <div class="sm:col-span-2">
+            <label for="profEmail" class="block text-xs font-medium text-slate-700 mb-1">E-mail</label>
+            <input id="profEmail" type="email" placeholder="professor@email.com.br" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+          <div class="sm:col-span-2">
+            <label for="profEndereco" class="block text-xs font-medium text-slate-700 mb-1">Endereço Profissional / Residencial Completo</label>
+            <input id="profEndereco" type="text" placeholder="Rua, número, complemento, bairro, CEP, Cidade/UF" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+          <div class="sm:col-span-2">
+            <label for="profPagamento" class="block text-xs font-medium text-slate-700 mb-1">Dados para Recebimento (Chave PIX / Conta Bancária)</label>
+            <input id="profPagamento" type="text" placeholder="Ex.: Chave PIX (CPF): 000.000.000-00 — Banco Itaú, Ag. 0001, C/C 12345-6" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Dados do Contratante e do Aluno -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-5 py-3.5 bg-navy-50 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-navy-700 text-white text-xs font-bold flex items-center justify-center">3</span>
+            <h2 id="tituloCardContratante" class="font-semibold text-sm text-navy-900">Dados do(a) Responsável Legal e do(a) Aluno(a) Menor</h2>
+          </div>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div class="sm:col-span-2">
+              <label id="labelContratanteNome" for="contratanteNome" class="block text-xs font-medium text-slate-700 mb-1">Nome Completo do(a) Responsável Legal (Contratante)</label>
+              <input id="contratanteNome" type="text" placeholder="Ex.: Mariana Ferreira Souza" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="contratanteNacionalidade" class="block text-xs font-medium text-slate-700 mb-1">Nacionalidade</label>
+              <input id="contratanteNacionalidade" type="text" value="brasileiro(a)" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="contratanteEstadoCivil" class="block text-xs font-medium text-slate-700 mb-1">Estado Civil</label>
+              <input id="contratanteEstadoCivil" type="text" placeholder="Ex.: casado(a), solteiro(a)" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="contratanteProfissao" class="block text-xs font-medium text-slate-700 mb-1">Profissão</label>
+              <input id="contratanteProfissao" type="text" placeholder="Ex.: Contadora / Estudante" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="contratanteRG" class="block text-xs font-medium text-slate-700 mb-1">RG e Órgão Expedidor</label>
+              <input id="contratanteRG" type="text" placeholder="Ex.: 98.765.432-1 SSP/PR" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="contratanteCPF" class="block text-xs font-medium text-slate-700 mb-1">CPF</label>
+              <input id="contratanteCPF" type="text" maxlength="14" placeholder="000.000.000-00" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="contratanteTelefone" class="block text-xs font-medium text-slate-700 mb-1">Telefone / WhatsApp</label>
+              <input id="contratanteTelefone" type="text" maxlength="15" placeholder="(44) 98888-8888" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="contratanteEmail" class="block text-xs font-medium text-slate-700 mb-1">E-mail</label>
+              <input id="contratanteEmail" type="email" placeholder="cliente@email.com.br" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="contratanteEndereco" class="block text-xs font-medium text-slate-700 mb-1">Endereço Residencial Completo</label>
+              <input id="contratanteEndereco" type="text" placeholder="Rua, número, complemento, bairro, CEP, Cidade/UF" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+          </div>
+
+          <!-- Bloco Condicional: Dados do Aluno Menor -->
+          <div id="blocoAlunoMenor" class="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-900">Identificação do(a) Aluno(a) Menor de Idade (Beneficiário)</span>
+              <span class="text-[11px] font-medium text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">Menor de 18 anos</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="sm:col-span-2">
+                <label for="alunoMenorNome" class="block text-xs font-medium text-slate-700 mb-1">Nome Completo do(a) Aluno(a)</label>
+                <input id="alunoMenorNome" type="text" placeholder="Ex.: Lucas Ferreira Souza" class="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+              </div>
+              <div>
+                <label for="alunoMenorDataNasc" class="block text-xs font-medium text-slate-700 mb-1">Data de Nascimento do(a) Aluno(a)</label>
+                <input id="alunoMenorDataNasc" type="text" placeholder="Ex.: 12/05/2011" class="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+              </div>
+              <div>
+                <label for="alunoMenorParentesco" class="block text-xs font-medium text-slate-700 mb-1">Vínculo do Responsável com o(a) Aluno(a)</label>
+                <select id="alunoMenorParentesco" class="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600">
+                  <option value="mãe e representante legal">Mãe e representante legal</option>
+                  <option value="pai e representante legal">Pai e representante legal</option>
+                  <option value="responsável legal">Responsável legal</option>
+                  <option value="tutor(a) legal">Tutor(a) legal</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dados Pedagógicos do Aluno (Sempre visíveis) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+            <div>
+              <label for="alunoAnoEscolar" class="block text-xs font-medium text-slate-700 mb-1">Série / Ano Escolar ou Nível</label>
+              <input id="alunoAnoEscolar" type="text" placeholder="Ex.: 9º Ano do Ensino Fundamental / 3º Ano EM" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="conteudoMatematica" class="block text-xs font-medium text-slate-700 mb-1">Conteúdo / Foco das Aulas de Matemática</label>
+              <input id="conteudoMatematica" type="text" placeholder="Ex.: Álgebra, Funções, Geometria e Preparação ENEM" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Modalidade, Quantidade de Aulas e Valores -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-5 py-3.5 bg-navy-50 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-navy-700 text-white text-xs font-bold flex items-center justify-center">4</span>
+            <h2 class="font-semibold text-sm text-navy-900">Modalidade, Carga Horária e Valores</h2>
+          </div>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <!-- Subbloco: Online vs Presencial -->
+          <div id="blocoModalidadeOnline" class="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200">
+            <label for="plataformaOnline" class="block text-xs font-semibold text-navy-900 mb-1">Plataforma das Aulas Online</label>
+            <input id="plataformaOnline" type="text" value="Google Meet" placeholder="Ex.: Google Meet / Zoom / Microsoft Teams" class="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+
+          <div id="blocoModalidadePresencial" class="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 hidden space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-1">
+              <label for="localAulaPresencial" class="block text-xs font-semibold text-emerald-950">Endereço de Realização das Aulas Presenciais</label>
+              <div class="flex gap-1.5">
+                <button type="button" id="btnUsarEndAluno" class="text-[11px] font-medium px-2 py-0.5 rounded bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100">Usar endereço do Aluno</button>
+                <button type="button" id="btnUsarEndProf" class="text-[11px] font-medium px-2 py-0.5 rounded bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100">Usar meu endereço</button>
+              </div>
+            </div>
+            <input id="localAulaPresencial" type="text" placeholder="Endereço completo onde ocorrerão as aulas presenciais" class="w-full rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          </div>
+
+          <!-- Duração e Regras de Horário -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label for="duracaoHoraAula" class="block text-xs font-medium text-slate-700 mb-1">Duração de Cada Aula</label>
+              <input id="duracaoHoraAula" type="text" value="60 (sessenta) minutos" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="antecedenciaRemarcacao" class="block text-xs font-medium text-slate-700 mb-1">Aviso p/ Remarcação</label>
+              <input id="antecedenciaRemarcacao" type="text" value="24 (vinte e quatro) horas" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="toleranciaAtraso" class="block text-xs font-medium text-slate-700 mb-1">Tolerância de Atraso</label>
+              <input id="toleranciaAtraso" type="text" value="15 (quinze) minutos" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+          </div>
+
+          <!-- Subbloco Condicional A: UMA ÚNICA AULA -->
+          <div id="blocoAulaUnica" class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 hidden">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-navy-900">Configuração de Aula Única (Valor Único)</span>
+              <span class="text-[11px] font-medium text-navy-700 bg-navy-100 px-2 py-0.5 rounded">Pagamento Único</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="sm:col-span-2">
+                <label for="dataHoraAulaUnica" class="block text-xs font-medium text-slate-700 mb-1">Data e Horário da Aula Única</label>
+                <input id="dataHoraAulaUnica" type="text" placeholder="Ex.: 22/10/2026, das 14h00 às 15h00" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+              </div>
+              <div>
+                <label for="valorUnicoNum" class="block text-xs font-medium text-slate-700 mb-1">Valor Único da Aula (R$)</label>
+                <input id="valorUnicoNum" type="text" value="120,00" placeholder="Ex.: 120,00" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-600" />
+                <p id="previewValorUnicoExtenso" class="text-[11px] text-slate-500 mt-1"></p>
+              </div>
+              <div>
+                <label for="vencimentoAulaUnica" class="block text-xs font-medium text-slate-700 mb-1">Prazo / Condição de Pagamento</label>
+                <input id="vencimentoAulaUnica" type="text" value="até a data de realização da aula" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Subbloco Condicional B: VÁRIAS AULAS (PACOTE) -->
+          <div id="blocoPacoteAulas" class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-navy-900">Configuração do Conjunto de Aulas e Parcelamento</span>
+              <span class="text-[11px] font-medium text-navy-700 bg-navy-100 px-2 py-0.5 rounded">Múltiplas Aulas</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label for="qtdAulasNum" class="block text-xs font-medium text-slate-700 mb-1">Quantidade de Aulas</label>
+                <input id="qtdAulasNum" type="number" min="2" max="500" value="8" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-600" />
+                <p id="previewQtdAulasExtenso" class="text-[11px] text-slate-500 mt-1"></p>
+              </div>
+              <div>
+                <label for="valorTotalPacoteNum" class="block text-xs font-medium text-slate-700 mb-1">Valor Total Integral (R$)</label>
+                <input id="valorTotalPacoteNum" type="text" value="800,00" placeholder="Ex.: 800,00" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-600" />
+                <p id="previewValorTotalExtenso" class="text-[11px] text-slate-500 mt-1"></p>
+              </div>
+              <div>
+                <label for="numeroParcelasNum" class="block text-xs font-medium text-slate-700 mb-1">Nº de Parcelas</label>
+                <input id="numeroParcelasNum" type="number" min="1" max="36" value="2" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-600" />
+                <p id="previewParcelaCalculada" class="text-[11px] text-emerald-700 font-medium mt-1"></p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="valorCadaParcelaNum" class="block text-xs font-medium text-slate-700 mb-1">Valor de Cada Parcela (R$) <span class="text-[10px] text-slate-400">(calculado automaticamente)</span></label>
+                <input id="valorCadaParcelaNum" type="text" value="400,00" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-600" />
+                <p id="previewValorParcelaExtenso" class="text-[11px] text-slate-500 mt-1"></p>
+              </div>
+              <div>
+                <label for="datasVencimentoParcelas" class="block text-xs font-medium text-slate-700 mb-1">Vencimento das Parcelas</label>
+                <input id="datasVencimentoParcelas" type="text" value="todo dia 10 de cada mês, vencendo a 1ª parcela no ato da assinatura" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+              </div>
+              <div class="sm:col-span-2">
+                <label for="cronogramaAulas" class="block text-xs font-medium text-slate-700 mb-1">Dias da Semana e Horários das Aulas</label>
+                <input id="cronogramaAulas" type="text" value="terças e quintas-feiras, das 14h00 às 15h00" placeholder="Ex.: terças e quintas-feiras, das 14h00 às 15h00" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+              </div>
+              <div class="sm:col-span-2">
+                <label for="periodoVigenciaPacote" class="block text-xs font-medium text-slate-700 mb-1">Período de Realização das Aulas</label>
+                <input id="periodoVigenciaPacote" type="text" value="outubro a novembro de 2026" placeholder="Ex.: 20/10/2026 a 15/12/2026" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5: Foro, Data e Testemunhas -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-5 py-3.5 bg-navy-50 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-navy-700 text-white text-xs font-bold flex items-center justify-center">5</span>
+            <h2 class="font-semibold text-sm text-navy-900">Foro, Data de Assinatura e Testemunhas (Opcional)</h2>
+          </div>
+        </div>
+        <div class="p-5 space-y-3.5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label for="cidadeContrato" class="block text-xs font-medium text-slate-700 mb-1">Cidade (Foro)</label>
+              <input id="cidadeContrato" type="text" value="Maringá" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="estadoContrato" class="block text-xs font-medium text-slate-700 mb-1">UF</label>
+              <input id="estadoContrato" type="text" maxlength="2" value="PR" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs uppercase focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="dataAssinaturaContrato" class="block text-xs font-medium text-slate-700 mb-1">Data de Assinatura</label>
+              <input id="dataAssinaturaContrato" type="text" value="15 de outubro de 2026" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label for="testemunha1Nome" class="block text-xs font-medium text-slate-700 mb-1">Testemunha 1 — Nome (Opcional)</label>
+              <input id="testemunha1Nome" type="text" placeholder="Deixe em branco para preencher à mão" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="testemunha1CPF" class="block text-xs font-medium text-slate-700 mb-1">Testemunha 1 — CPF (Opcional)</label>
+              <input id="testemunha1CPF" type="text" maxlength="14" placeholder="000.000.000-00" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="testemunha2Nome" class="block text-xs font-medium text-slate-700 mb-1">Testemunha 2 — Nome (Opcional)</label>
+              <input id="testemunha2Nome" type="text" placeholder="Deixe em branco para preencher à mão" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+            <div>
+              <label for="testemunha2CPF" class="block text-xs font-medium text-slate-700 mb-1">Testemunha 2 — CPF (Opcional)</label>
+              <input id="testemunha2CPF" type="text" maxlength="14" placeholder="000.000.000-00" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <button id="btnClearForm" type="button" class="px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-semibold transition">
+              Limpar Campos
+            </button>
+            <button id="btnGeneratePdfBottom" type="button" class="flex-1 sm:flex-initial px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-md transition flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 8l-3-3m3 3l3-3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1"/>
+              </svg>
+              <span>Gerar PDF Pronto para Assinar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Right Column: Live Contract Preview (6 cols on lg) -->
+    <section class="lg:col-span-6 xl:col-span-6 lg:sticky lg:top-20 print-only-container">
+      <div class="bg-slate-800 text-white px-4 py-2.5 rounded-t-2xl flex items-center justify-between no-print">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+          <span class="text-xs font-semibold tracking-wide uppercase text-slate-200">Pré-Visualização em Tempo Real do Contrato</span>
+        </div>
+        <span id="badgeConfigAtiva" class="text-[11px] bg-white/15 px-2.5 py-0.5 rounded-full text-slate-100 font-medium">
+          Menor • Online • Pacote
+        </span>
+      </div>
+
+      <div class="bg-white border border-slate-300 rounded-b-2xl shadow-xl p-6 sm:p-8 contract-paper text-xs sm:text-[13px] space-y-3.5 max-h-[82vh] overflow-y-auto print-only-container" id="contractPreviewPaper">
+        <!-- Dynamic Contract HTML injected here by renderContractPreview() -->
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // ESTADO DA APLICAÇÃO
+    // =========================================================================
+    var appState = {
+      isMenor: true,
+      isOnline: true,
+      isAulaUnica: false,
+      autoCalcParcela: true
+    };
+
+    // =========================================================================
+    // UTILITÁRIOS DE FORMATAÇÃO E VALOR POR EXTENSO EM PORTUGUÊS
+    // =========================================================================
+    function showToast(msg) {
+      var container = document.getElementById('toastContainer');
+      var text = document.getElementById('toastMessage');
+      if (!container || !text) return;
+      text.textContent = msg;
+      container.classList.remove('hidden');
+      if (window._toastTimer) clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(function () {
+        container.classList.add('hidden');
+      }, 3200);
+    }
+
+    function formatCPFMask(val) {
+      var digits = (val || '').replace(/\D/g, '').slice(0, 11);
+      if (digits.length > 9) {
+        return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+      } else if (digits.length > 6) {
+        return digits.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+      } else if (digits.length > 3) {
+        return digits.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+      }
+      return digits;
+    }
+
+    function formatPhoneMask(val) {
+      var digits = (val || '').replace(/\D/g, '').slice(0, 11);
+      if (digits.length > 10) {
+        return digits.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      } else if (digits.length > 6) {
+        return digits.replace(/(\d{2})(\d{4})(\d{1,4})/, '($1) $2-$3');
+      } else if (digits.length > 2) {
+        return digits.replace(/(\d{2})(\d{1,5})/, '($1) $2');
+      }
+      return digits;
+    }
+
+    function parseBRLNumber(str) {
+      if (!str) return 0;
+      var cleaned = String(str).replace(/[^\d,\.]/g, '');
+      if (cleaned.indexOf(',') !== -1) {
+        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+      }
+      var n = parseFloat(cleaned);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function formatBRLCurrency(num) {
+      var n = Number(num) || 0;
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function numeroAte999Extenso(n, feminino) {
+      var unidadesM = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+      var unidadesF = ['', 'uma', 'duas', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+      var dezADezenove = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+      var dezenas = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+      var centenasM = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+      var centenasF = ['', 'cento', 'duzentas', 'trezentas', 'quatrocentas', 'quinhentas', 'seiscentas', 'setecentas', 'oitocentas', 'novecentas'];
+
+      n = Math.floor(n);
+      if (n === 0) return 'zero';
+      if (n === 100) return 'cem';
+
+      var c = Math.floor(n / 100);
+      var resto = n % 100;
+      var d = Math.floor(resto / 10);
+      var u = resto % 10;
+
+      var partes = [];
+      if (c > 0) partes.push(feminino ? centenasF[c] : centenasM[c]);
+      if (resto >= 10 && resto <= 19) {
+        partes.push(dezADezenove[resto - 10]);
+      } else {
+        if (d > 0) partes.push(dezenas[d]);
+        if (u > 0) partes.push(feminino ? unidadesF[u] : unidadesM[u]);
+      }
+      return partes.join(' e ');
+    }
+
+    function inteiroParaExtenso(n, feminino) {
+      n = Math.floor(Math.abs(Number(n) || 0));
+      if (n === 0) return 'zero';
+      var milhares = Math.floor(n / 1000);
+      var resto = n % 1000;
+      var partes = [];
+      if (milhares > 0) {
+        if (milhares === 1) {
+          partes.push('mil');
+        } else {
+          partes.push(numeroAte999Extenso(milhares, feminino) + ' mil');
+        }
+      }
+      if (resto > 0) {
+        var conectivo = (milhares > 0 && (resto < 100 || resto % 100 === 0)) ? ' e ' : (milhares > 0 ? ' ' : '');
+        partes.push(conectivo + numeroAte999Extenso(resto, feminino));
+      }
+      return partes.join('');
+    }
+
+    function valorMonetarioPorExtenso(valorNum) {
+      var n = Math.abs(Number(valorNum) || 0);
+      var reais = Math.floor(n + 0.0001);
+      var centavos = Math.round((n - reais) * 100);
+      if (centavos === 100) {
+        reais += 1;
+        centavos = 0;
+      }
+      var partes = [];
+      if (reais > 0) {
+        partes.push(inteiroParaExtenso(reais, false) + (reais === 1 ? ' real' : ' reais'));
+      }
+      if (centavos > 0) {
+        partes.push(inteiroParaExtenso(centavos, false) + (centavos === 1 ? ' centavo' : ' centavos'));
+      }
+      if (partes.length === 0) return 'zero reais';
+      return partes.join(' e ');
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function valOrPlaceholder(id, placeholderText) {
+      var el = document.getElementById(id);
+      var v = el ? el.value.trim() : '';
+      return v ? v : placeholderText;
+    }
+
+    // =========================================================================
+    // COLETA ESTRUTURADA DE TODOS OS DADOS DO FORMULÁRIO
+    // =========================================================================
+    function getContractData() {
+      var qtdNum = Math.max(1, parseInt(document.getElementById('qtdAulasNum').value, 10) || 1);
+      var qtdExtenso = inteiroParaExtenso(qtdNum, true);
+      var qtdFormatada = qtdNum + ' (' + qtdExtenso + ') aulas';
+
+      var valorUnicoNumber = parseBRLNumber(document.getElementById('valorUnicoNum').value);
+      var valorUnicoStr = 'R$ ' + formatBRLCurrency(valorUnicoNumber) + ' (' + valorMonetarioPorExtenso(valorUnicoNumber) + ')';
+
+      var valorTotalNumber = parseBRLNumber(document.getElementById('valorTotalPacoteNum').value);
+      var valorTotalStr = 'R$ ' + formatBRLCurrency(valorTotalNumber) + ' (' + valorMonetarioPorExtenso(valorTotalNumber) + ')';
+
+      var parcelasNum = Math.max(1, parseInt(document.getElementById('numeroParcelasNum').value, 10) || 1);
+      var parcelasExtenso = inteiroParaExtenso(parcelasNum, true);
+      var parcelasFormatada = parcelasNum + ' (' + parcelasExtenso + ')';
+
+      var valorParcelaNumber = parseBRLNumber(document.getElementById('valorCadaParcelaNum').value);
+      var valorParcelaStr = 'R$ ' + formatBRLCurrency(valorParcelaNumber) + ' (' + valorMonetarioPorExtenso(valorParcelaNumber) + ')';
+
+      var contratanteNome = valOrPlaceholder('contratanteNome', '[Nome Completo do(a) Contratante]');
+      var alunoMenorNome = valOrPlaceholder('alunoMenorNome', '[Nome Completo do(a) Aluno(a) Menor]');
+      var nomeEfetivoAluno = appState.isMenor ? alunoMenorNome : contratanteNome;
+
+      return {
+        isMenor: appState.isMenor,
+        isOnline: appState.isOnline,
+        isAulaUnica: appState.isAulaUnica,
+
+        profNome: valOrPlaceholder('profNome', '[Nome Completo do(a) Professor(a)]'),
+        profNacionalidade: valOrPlaceholder('profNacionalidade', 'brasileiro(a)'),
+        profEstadoCivil: valOrPlaceholder('profEstadoCivil', '[estado civil]'),
+        profProfissao: valOrPlaceholder('profProfissao', 'Professor(a) de Matemática'),
+        profRG: valOrPlaceholder('profRG', '[nº do RG]'),
+        profCPF: valOrPlaceholder('profCPF', '[000.000.000-00]'),
+        profTelefone: valOrPlaceholder('profTelefone', '[(00) 00000-0000]'),
+        profEmail: valOrPlaceholder('profEmail', '[email@dominio.com.br]'),
+        profEndereco: valOrPlaceholder('profEndereco', '[Endereço completo do(a) Professor(a)]'),
+        profPagamento: valOrPlaceholder('profPagamento', '[Chave PIX / Dados Bancários]'),
+
+        contratanteNome: contratanteNome,
+        contratanteNacionalidade: valOrPlaceholder('contratanteNacionalidade', 'brasileiro(a)'),
+        contratanteEstadoCivil: valOrPlaceholder('contratanteEstadoCivil', '[estado civil]'),
+        contratanteProfissao: valOrPlaceholder('contratanteProfissao', '[profissão]'),
+        contratanteRG: valOrPlaceholder('contratanteRG', '[nº do RG]'),
+        contratanteCPF: valOrPlaceholder('contratanteCPF', '[000.000.000-00]'),
+        contratanteTelefone: valOrPlaceholder('contratanteTelefone', '[(00) 00000-0000]'),
+        contratanteEmail: valOrPlaceholder('contratanteEmail', '[email.contratante@dominio.com.br]'),
+        contratanteEndereco: valOrPlaceholder('contratanteEndereco', '[Endereço completo do(a) Contratante]'),
+
+        alunoMenorNome: alunoMenorNome,
+        alunoMenorDataNasc: valOrPlaceholder('alunoMenorDataNasc', '[DD/MM/AAAA]'),
+        alunoMenorParentesco: document.getElementById('alunoMenorParentesco').value || 'responsável legal',
+        nomeEfetivoAluno: nomeEfetivoAluno,
+        alunoAnoEscolar: valOrPlaceholder('alunoAnoEscolar', '[Série / Ano Escolar]'),
+        conteudoMatematica: valOrPlaceholder('conteudoMatematica', '[Conteúdos de Matemática]'),
+
+        plataformaOnline: valOrPlaceholder('plataformaOnline', 'Google Meet'),
+        localAulaPresencial: valOrPlaceholder('localAulaPresencial', '[Endereço completo das aulas presenciais]'),
+
+        duracaoHoraAula: valOrPlaceholder('duracaoHoraAula', '60 (sessenta) minutos'),
+        antecedenciaRemarcacao: valOrPlaceholder('antecedenciaRemarcacao', '24 (vinte e quatro) horas'),
+        toleranciaAtraso: valOrPlaceholder('toleranciaAtraso', '15 (quinze) minutos'),
+
+        dataHoraAulaUnica: valOrPlaceholder('dataHoraAulaUnica', '[DD/MM/AAAA, das HHhMM às HHhMM]'),
+        valorAulaUnica: valorUnicoStr,
+        vencimentoAulaUnica: valOrPlaceholder('vencimentoAulaUnica', 'até a data de realização da aula'),
+
+        quantidadeTotalAulas: qtdFormatada,
+        cronogramaAulas: valOrPlaceholder('cronogramaAulas', '[dias da semana e horários]'),
+        periodoVigenciaPacote: valOrPlaceholder('periodoVigenciaPacote', '[período de realização]'),
+        valorTotalPacote: valorTotalStr,
+        numeroParcelas: parcelasFormatada,
+        valorCadaParcela: valorParcelaStr,
+        datasVencimentoParcelas: valOrPlaceholder('datasVencimentoParcelas', '[datas de vencimento]'),
+
+        cidadeContrato: valOrPlaceholder('cidadeContrato', 'Maringá'),
+        estadoContrato: valOrPlaceholder('estadoContrato', 'PR').toUpperCase(),
+        dataAssinaturaContrato: valOrPlaceholder('dataAssinaturaContrato', '15 de outubro de 2026'),
+
+        testemunha1Nome: document.getElementById('testemunha1Nome').value.trim(),
+        testemunha1CPF: document.getElementById('testemunha1CPF').value.trim(),
+        testemunha2Nome: document.getElementById('testemunha2Nome').value.trim(),
+        testemunha2CPF: document.getElementById('testemunha2CPF').value.trim()
+      };
+    }
+
+    // =========================================================================
+    // ATUALIZAÇÃO DOS CONTROLES VISUAIS E PREVIEW DO CONTRATO
+    // =========================================================================
+    function syncOptionButtonsUI() {
+      function setCardActive(btnId, dotId, isActive) {
+        var btn = document.getElementById(btnId);
+        var dot = document.getElementById(dotId);
+        if (!btn || !dot) return;
+        if (isActive) {
+          btn.className = 'p-3 rounded-xl border-2 text-left transition flex items-start gap-2.5 border-navy-700 bg-navy-50/70';
+          dot.className = 'w-4 h-4 mt-0.5 rounded-full border-2 border-navy-700 bg-navy-700 flex-shrink-0';
+        } else {
+          btn.className = 'p-3 rounded-xl border-2 text-left transition flex items-start gap-2.5 border-slate-200 hover:border-slate-300 bg-white';
+          dot.className = 'w-4 h-4 mt-0.5 rounded-full border-2 border-slate-300 flex-shrink-0';
+        }
+      }
+
+      setCardActive('optMenorSim', 'dotMenorSim', appState.isMenor);
+      setCardActive('optMenorNao', 'dotMenorNao', !appState.isMenor);
+
+      setCardActive('optModOnline', 'dotModOnline', appState.isOnline);
+      setCardActive('optModPresencial', 'dotModPresencial', !appState.isOnline);
+
+      setCardActive('optRegimeUnica', 'dotRegimeUnica', appState.isAulaUnica);
+      setCardActive('optRegimePacote', 'dotRegimePacote', !appState.isAulaUnica);
+
+      // Mostrar/ocultar seções condicionais
+      var blocoMenor = document.getElementById('blocoAlunoMenor');
+      var tituloContratante = document.getElementById('tituloCardContratante');
+      var labelContratanteNome = document.getElementById('labelContratanteNome');
+
+      if (appState.isMenor) {
+        blocoMenor.classList.remove('hidden');
+        tituloContratante.textContent = 'Dados do(a) Responsável Legal e do(a) Aluno(a) Menor';
+        labelContratanteNome.textContent = 'Nome Completo do(a) Responsável Legal (Contratante)';
+      } else {
+        blocoMenor.classList.add('hidden');
+        tituloContratante.textContent = 'Dados do(a) Aluno(a) Maior de Idade (Contratante)';
+        labelContratanteNome.textContent = 'Nome Completo do(a) Aluno(a) (Contratante)';
+      }
+
+      var blocoOnline = document.getElementById('blocoModalidadeOnline');
+      var blocoPresencial = document.getElementById('blocoModalidadePresencial');
+      if (appState.isOnline) {
+        blocoOnline.classList.remove('hidden');
+        blocoPresencial.classList.add('hidden');
+      } else {
+        blocoOnline.classList.add('hidden');
+        blocoPresencial.classList.remove('hidden');
+      }
+
+      var blocoUnica = document.getElementById('blocoAulaUnica');
+      var blocoPacote = document.getElementById('blocoPacoteAulas');
+      if (appState.isAulaUnica) {
+        blocoUnica.classList.remove('hidden');
+        blocoPacote.classList.add('hidden');
+      } else {
+        blocoUnica.classList.add('hidden');
+        blocoPacote.classList.remove('hidden');
+      }
+
+      var badge = document.getElementById('badgeConfigAtiva');
+      if (badge) {
+        badge.textContent =
+          (appState.isMenor ? 'Aluno Menor' : 'Aluno Maior') + ' • ' +
+          (appState.isOnline ? 'Online' : 'Presencial') + ' • ' +
+          (appState.isAulaUnica ? 'Aula Única' : 'Conjunto de Aulas');
+      }
+    }
+
+    function updateCalculatedExtensoHelpers() {
+      var vUnico = parseBRLNumber(document.getElementById('valorUnicoNum').value);
+      document.getElementById('previewValorUnicoExtenso').textContent =
+        'Por extenso: ' + valorMonetarioPorExtenso(vUnico);
+
+      var qtd = Math.max(1, parseInt(document.getElementById('qtdAulasNum').value, 10) || 1);
+      document.getElementById('previewQtdAulasExtenso').textContent =
+        qtd + ' (' + inteiroParaExtenso(qtd, true) + ') aulas';
+
+      var vTotal = parseBRLNumber(document.getElementById('valorTotalPacoteNum').value);
+      document.getElementById('previewValorTotalExtenso').textContent =
+        'Por extenso: ' + valorMonetarioPorExtenso(vTotal);
+
+      var nParc = Math.max(1, parseInt(document.getElementById('numeroParcelasNum').value, 10) || 1);
+      if (appState.autoCalcParcela) {
+        var calcParc = vTotal / nParc;
+        document.getElementById('valorCadaParcelaNum').value = formatBRLCurrency(calcParc);
+      }
+      var vParc = parseBRLNumber(document.getElementById('valorCadaParcelaNum').value);
+      document.getElementById('previewParcelaCalculada').textContent =
+        nParc + ' (' + inteiroParaExtenso(nParc, true) + ') parcela(s)';
+      document.getElementById('previewValorParcelaExtenso').textContent =
+        'Por extenso: ' + valorMonetarioPorExtenso(vParc);
+    }
+
+    function hi(text) {
+      return '<span class="field-highlight font-semibold">' + escapeHtml(text) + '</span>';
+    }
+
+    function renderContractPreview() {
+      updateCalculatedExtensoHelpers();
+      var d = getContractData();
+      var paper = document.getElementById('contractPreviewPaper');
+      if (!paper) return;
+
+      var subtitulo = (d.isAulaUnica ? 'Aula Particular de Matemática' : 'Aulas Particulares de Matemática') +
+        ' — Modalidade ' + (d.isOnline ? 'Online' : 'Presencial');
+
+      var qualificacaoContratanteHtml = '';
+      if (d.isMenor) {
+        qualificacaoContratanteHtml =
+          '<p><strong>CONTRATANTE (RESPONSÁVEL LEGAL):</strong> ' + hi(d.contratanteNome) + ', ' +
+          escapeHtml(d.contratanteNacionalidade) + ', ' + escapeHtml(d.contratanteEstadoCivil) + ', ' +
+          escapeHtml(d.contratanteProfissao) + ', portador(a) da Cédula de Identidade RG nº ' +
+          hi(d.contratanteRG) + ' e inscrito(a) no CPF sob o nº ' + hi(d.contratanteCPF) +
+          ', residente e domiciliado(a) em ' + hi(d.contratanteEndereco) + ', telefone ' +
+          escapeHtml(d.contratanteTelefone) + ', e-mail ' + escapeHtml(d.contratanteEmail) +
+          ', neste ato representando legalmente, na qualidade de ' + hi(d.alunoMenorParentesco) +
+          ', o(a) aluno(a) menor de idade:</p>' +
+          '<p class="mt-2"><strong>ALUNO(A) BENEFICIÁRIO(A):</strong> ' + hi(d.alunoMenorNome) +
+          ', menor de idade, nascido(a) em ' + hi(d.alunoMenorDataNasc) + ', cursando ' +
+          hi(d.alunoAnoEscolar) + ', residente e domiciliado(a) no mesmo endereço do(a) CONTRATANTE.</p>';
+      } else {
+        qualificacaoContratanteHtml =
+          '<p><strong>CONTRATANTE E ALUNO(A):</strong> ' + hi(d.contratanteNome) + ', ' +
+          escapeHtml(d.contratanteNacionalidade) + ', ' + escapeHtml(d.contratanteEstadoCivil) + ', ' +
+          escapeHtml(d.contratanteProfissao) + ', portador(a) da Cédula de Identidade RG nº ' +
+          hi(d.contratanteRG) + ' e inscrito(a) no CPF sob o nº ' + hi(d.contratanteCPF) +
+          ', residente e domiciliado(a) em ' + hi(d.contratanteEndereco) + ', telefone ' +
+          escapeHtml(d.contratanteTelefone) + ', e-mail ' + escapeHtml(d.contratanteEmail) +
+          ', cursando ' + hi(d.alunoAnoEscolar) + '.</p>';
+      }
+
+      var quadroFinanceiroRows = '';
+      if (d.isAulaUnica) {
+        quadroFinanceiroRows =
+          '<tr class="border-b border-slate-200">' +
+            '<td class="py-1.5 pr-3 font-bold text-slate-600">Valor Único Contratado</td>' +
+            '<td class="py-1.5">' + hi(d.valorAulaUnica) + ' (Vencimento: ' + escapeHtml(d.vencimentoAulaUnica) + ')</td>' +
+          '</tr>';
+      } else {
+        quadroFinanceiroRows =
+          '<tr class="border-b border-slate-200">' +
+            '<td class="py-1.5 pr-3 font-bold text-slate-600">Valor Total Integral</td>' +
+            '<td class="py-1.5">' + hi(d.valorTotalPacote) + '</td>' +
+          '</tr>' +
+          '<tr class="border-b border-slate-200">' +
+            '<td class="py-1.5 pr-3 font-bold text-slate-600">Parcelamento Acordado</td>' +
+            '<td class="py-1.5">' + hi(d.numeroParcelas + ' parcela(s)') + ' de ' + hi(d.valorCadaParcela) + ' (' + escapeHtml(d.datasVencimentoParcelas) + ')</td>' +
+          '</tr>';
+      }
+
+      var clausulaObjetoHtml = d.isAulaUnica
+        ? '<p><strong>1.1.</strong> O presente contrato tem por objeto a prestação de serviços educacionais personalizados pelo(a) CONTRATADO(A) em favor do(a) aluno(a) ' + hi(d.nomeEfetivoAluno) + ', consistindo em <strong>uma única aula particular de Matemática</strong>, com foco em ' + hi(d.conteudoMatematica) + ', agendada para ' + hi(d.dataHoraAulaUnica) + ', com duração de ' + hi(d.duracaoHoraAula) + '.</p>'
+        : '<p><strong>1.1.</strong> O presente contrato tem por objeto a prestação de serviços educacionais personalizados pelo(a) CONTRATADO(A) em favor do(a) aluno(a) ' + hi(d.nomeEfetivoAluno) + ', consistindo em <strong>um conjunto de ' + hi(d.quantidadeTotalAulas) + ' particulares de Matemática</strong>, com foco em ' + hi(d.conteudoMatematica) + ', a serem realizadas no período de ' + hi(d.periodoVigenciaPacote) + ', conforme o cronograma de ' + hi(d.cronogramaAulas) + ', tendo cada aula a duração de ' + hi(d.duracaoHoraAula) + '.</p>';
+
+      var clausulaModalidadeHtml = '';
+      if (d.isOnline) {
+        clausulaModalidadeHtml =
+          '<p><strong>2.1.</strong> Fica expressamente ajustado entre as partes que ' + (d.isAulaUnica ? 'a aula será realizada' : 'o conjunto de aulas será realizado') + ' de forma <strong>ONLINE (remota)</strong>, em tempo real (síncrona), por meio da plataforma de videoconferência ' + hi(d.plataformaOnline) + ' (ou outra ferramenta equivalente acordada entre as partes).</p>' +
+          '<p class="mt-1.5"><strong>2.2.</strong> Compete a ambas as partes dispor de conexão estável à internet, computador, tablet ou dispositivo compatível, bem como recursos funcionais de áudio e vídeo no horário agendado. O link de acesso à sala virtual será disponibilizado pelo(a) CONTRATADO(A) com antecedência mínima de 10 (dez) minutos antes do início ' + (d.isAulaUnica ? 'da aula' : 'de cada aula') + '.</p>' +
+          '<p class="mt-1.5"><strong>2.3.</strong> Caso ocorra falha técnica comprovada de conexão ou interrupção de energia elétrica que inviabilize a continuidade da transmissão por período superior a 15 (quinze) minutos, o tempo restante será integralmente reposto em nova data e horário ajustados em comum acordo, sem custo adicional ao(à) CONTRATANTE.</p>';
+      } else {
+        clausulaModalidadeHtml =
+          '<p><strong>2.1.</strong> Fica expressamente ajustado entre as partes que ' + (d.isAulaUnica ? 'a aula será realizada' : 'o conjunto de aulas será realizado') + ' de forma <strong>PRESENCIAL</strong>, no seguinte endereço: ' + hi(d.localAulaPresencial) + '.</p>' +
+          '<p class="mt-1.5"><strong>2.2.</strong> O local destinado ' + (d.isAulaUnica ? 'à aula presencial' : 'às aulas presenciais') + ' deverá dispor de mesa ou bancada adequada, iluminação suficiente, silêncio e condições propícias à concentração e ao estudo da disciplina de Matemática.</p>' +
+          '<p class="mt-1.5"><strong>2.3.</strong> ' + (d.isMenor ? 'Tratando-se de aluno(a) menor de idade, quando a aula ocorrer na residência do(a) aluno(a), recomenda-se a permanência de um adulto responsável no imóvel durante todo o período da aula.' : 'As partes comprometem-se a observar rigorosamente as normas de convivência, segurança e pontualidade no local designado.') + '</p>';
+      }
+
+      var clausulaPagamentoHtml = '';
+      if (d.isAulaUnica) {
+        clausulaPagamentoHtml =
+          '<p><strong>4.1.</strong> Pela prestação do serviço referente à <strong>aula única</strong> objeto deste instrumento, o(a) CONTRATANTE pagará ao(à) CONTRATADO(A) o <strong>valor único de ' + hi(d.valorAulaUnica) + '</strong>.</p>' +
+          '<p class="mt-1.5"><strong>4.2.</strong> O pagamento do valor único deverá ser efetuado ' + hi(d.vencimentoAulaUnica) + ', mediante transferência bancária ou PIX para os seguintes dados do(a) CONTRATADO(A): ' + hi(d.profPagamento) + ', servindo o comprovante de transação como recibo de quitação.</p>' +
+          '<p class="mt-1.5"><strong>4.3.</strong> O atraso no pagamento sujeitará o(a) CONTRATANTE à multa moratória de 2% (dois por cento) sobre o valor em aberto, acrescida de juros de mora de 1% (um por cento) ao mês (<em>pro rata die</em>) e atualização monetária pelo IPCA/IBGE.</p>';
+      } else {
+        clausulaPagamentoHtml =
+          '<p><strong>4.1.</strong> Pela prestação dos serviços referentes ao <strong>conjunto de ' + hi(d.quantidadeTotalAulas) + '</strong> objeto deste instrumento, o(a) CONTRATANTE pagará ao(à) CONTRATADO(A) o <strong>valor total integral de ' + hi(d.valorTotalPacote) + '</strong>.</p>' +
+          '<p class="mt-1.5"><strong>4.2.</strong> O valor integral acima estipulado será pago em <strong>' + hi(d.numeroParcelas + ' parcela(s)') + '</strong> iguais e sucessivas no valor de <strong>' + hi(d.valorCadaParcela) + '</strong> cada uma, com vencimento em ' + hi(d.datasVencimentoParcelas) + '.</p>' +
+          '<p class="mt-1.5"><strong>4.3.</strong> Os pagamentos deverão ser efetuados mediante transferência bancária ou PIX para os seguintes dados do(a) CONTRATADO(A): ' + hi(d.profPagamento) + ', servindo os respectivos comprovantes de transação como recibo de quitação de cada parcela.</p>' +
+          '<p class="mt-1.5"><strong>4.4.</strong> O atraso no pagamento de qualquer parcela sujeitará o(a) CONTRATANTE à multa moratória de 2% (dois por cento) sobre o valor em aberto, acrescida de juros de mora de 1% (um por cento) ao mês (<em>pro rata die</em>) e atualização pelo IPCA/IBGE, além de facultar ao(à) CONTRATADO(A) a suspensão de aulas subsequentes até a regularização.</p>';
+      }
+
+      var clausulaRescisao62 = d.isAulaUnica
+        ? '<p class="mt-1.5"><strong>6.2.</strong> Em caso de desistência imotivada da aula única com antecedência inferior a ' + escapeHtml(d.antecedenciaRemarcacao) + ', aplicar-se-á o disposto no item 3.3 deste contrato.</p>'
+        : '<p class="mt-1.5"><strong>6.2.</strong> Qualquer das partes poderá rescindir o presente contrato mediante comunicação prévia por escrito com antecedência mínima de 7 (sete) dias. Na hipótese de rescisão antecipada, proceder-se-á à apuração proporcional das aulas efetivamente ministradas até a data do encerramento: havendo saldo de aulas já pagas e não ministradas, o valor correspondente será restituído pelo(a) CONTRATADO(A) em até 10 (dez) dias úteis; havendo aulas já ministradas e ainda não quitadas nas parcelas vencidas, o saldo devedor proporcional vencerá antecipadamente, devendo ser quitado pelo(a) CONTRATANTE no mesmo prazo.</p>';
+
+      paper.innerHTML =
+        '<div class="text-center border-b-2 border-navy-700 pb-3">' +
+          '<h2 class="text-sm sm:text-base font-bold text-navy-800 uppercase tracking-wide">CONTRATO DE PRESTAÇÃO DE SERVIÇOS EDUCACIONAIS</h2>' +
+          '<p class="text-xs sm:text-sm font-bold text-slate-700 mt-0.5">' + escapeHtml(subtitulo) + '</p>' +
+        '</div>' +
+
+        '<p class="text-justify">Pelo presente instrumento particular de prestação de serviços educacionais, as partes abaixo qualificadas celebram o presente Contrato, que se regerá pelos artigos 593 a 609 do Código Civil Brasileiro (Lei nº 10.406/2002) e pelas cláusulas e condições a seguir estipuladas.</p>' +
+
+        '<div>' +
+          '<h3 class="font-bold text-navy-800 uppercase text-xs tracking-wide mb-1.5">1. QUALIFICAÇÃO DAS PARTES</h3>' +
+          '<div class="space-y-2 text-justify">' +
+            '<p><strong>CONTRATADO(A) (PROFESSOR(A)):</strong> ' + hi(d.profNome) + ', ' + escapeHtml(d.profNacionalidade) + ', ' + escapeHtml(d.profEstadoCivil) + ', ' + escapeHtml(d.profProfissao) + ', portador(a) da Cédula de Identidade RG nº ' + hi(d.profRG) + ' e inscrito(a) no CPF sob o nº ' + hi(d.profCPF) + ', residente e domiciliado(a) em ' + hi(d.profEndereco) + ', telefone ' + escapeHtml(d.profTelefone) + ', e-mail ' + escapeHtml(d.profEmail) + '.</p>' +
+            qualificacaoContratanteHtml +
+          '</div>' +
+        '</div>' +
+
+        '<div>' +
+          '<h3 class="font-bold text-navy-800 uppercase text-xs tracking-wide mb-1.5">QUADRO-RESUMO DOS SERVIÇOS CONTRATADOS</h3>' +
+          '<table class="w-full text-left border-t-2 border-b-2 border-navy-700 text-xs">' +
+            '<tbody>' +
+              '<tr class="border-b border-slate-200"><td class="py-1.5 pr-3 font-bold text-slate-600 w-44">Aluno(a) Beneficiário(a)</td><td class="py-1.5">' + hi(d.nomeEfetivoAluno) + ' (' + escapeHtml(d.alunoAnoEscolar) + ')</td></tr>' +
+              '<tr class="border-b border-slate-200"><td class="py-1.5 pr-3 font-bold text-slate-600">Disciplina e Foco</td><td class="py-1.5">Matemática — ' + escapeHtml(d.conteudoMatematica) + '</td></tr>' +
+              '<tr class="border-b border-slate-200"><td class="py-1.5 pr-3 font-bold text-slate-600">Modalidade de Ensino</td><td class="py-1.5">' + (d.isOnline ? '<strong>Online (Remota)</strong> via ' + hi(d.plataformaOnline) : '<strong>Presencial</strong> em ' + hi(d.localAulaPresencial)) + '</td></tr>' +
+              '<tr class="border-b border-slate-200"><td class="py-1.5 pr-3 font-bold text-slate-600">Regime de Contratação</td><td class="py-1.5">' + (d.isAulaUnica ? '<strong>Aula Única (Avulsa)</strong> — ' + hi(d.dataHoraAulaUnica) : '<strong>Conjunto de Aulas</strong> — ' + hi(d.quantidadeTotalAulas) + ' (' + escapeHtml(d.cronogramaAulas) + ')') + '</td></tr>' +
+              '<tr class="border-b border-slate-200"><td class="py-1.5 pr-3 font-bold text-slate-600">Duração da Hora-Aula</td><td class="py-1.5">' + escapeHtml(d.duracaoHoraAula) + '</td></tr>' +
+              quadroFinanceiroRows +
+              '<tr><td class="py-1.5 pr-3 font-bold text-slate-600">Dados para Pagamento</td><td class="py-1.5">' + escapeHtml(d.profPagamento) + '</td></tr>' +
+            '</tbody>' +
+          '</table>' +
+        '</div>' +
+
+        '<div class="text-justify">' +
+          '<h3 class="font-bold text-navy-800 uppercase text-xs tracking-wide mb-1">CLÁUSULA PRIMEIRA – DO OBJETO DO CONTRATO</h3>' +
+          clausulaObjetoHtml +
+          '<p class="mt-1.5"><strong>1.2.</strong> O serviço prestado tem finalidade estritamente pedagógica de reforço escolar, acompanhamento curricular, esclarecimento de dúvidas e resolução orientada de exercícios, caracterizando obrigação de meio e não de resultado, não implicando garantia de aprovação automática em provas, exames escolares, concursos ou vestibulares.</p>' +
+        '</div>' +
+
+        '<div class="text-justify">' +
+          '<h3 class="font-bold text-navy-800 uppercase text-xs tracking-wide mb-1">CLÁUSULA SEGUNDA – DA MODALIDADE DE REALIZAÇÃO (' + (d.isOnline ? 'ONLINE' : 'PRESENCIAL') + ')</h3>' +
+          clausulaModalidadeHtml +
+        '</div>' +
+
+        '<div class="text-justify">' +
+          '<h3 class="font-bold text-navy-800 uppercase text-xs tracking-wide mb-1">CLÁUSULA TERCEIRA – DA PONTUALIDADE, REMARCAÇÃO E FALTAS</h3>' +
+          '<p><strong>3.1.</strong> O horário de início e término ' + (d.isAulaUnica ? 'da aula' : 'de cada aula') + ' seguirá pontualmente o agendamento estabelecido. Haverá tolerância máxima de <strong>' + escapeHtml(d.toleranciaAtraso) + '</strong> para o comparecimento do(a) aluno(a). Eventual atraso por parte do(a) aluno(a) não acarretará prorrogação do horário de término nem redução do valor ajustado.</p>' +
+          '<p class="mt-1.5"><strong>3.2.</strong> Solicitações de cancelamento ou remarcação por parte do(a) CONTRATANTE deverão ser comunicadas ao(à) CONTRATADO(A) com antecedência mínima de <strong>' + escapeHtml(d.antecedenciaRemarcacao) + '</strong>, hipótese em que a aula será reagendada conforme disponibilidade de agenda de ambas as partes.</p>' +
+          '<p class="mt-1.5"><strong>3.3.</strong> O não comparecimento do(a) aluno(a) sem aviso prévio ou o pedido de cancelamento formulado com antecedência inferior a ' + escapeHtml(d.antecedenciaRemarcacao) + ' (salvo motivo de força maior ou enfermidade comprovada) ensejará a contabilização da aula como efetivamente ministrada, sem direito a reposição ou restituição.</p>' +
+          '<p class="mt-1.5"><strong>3.4.</strong> Caso o(a) CONTRATADO(A) necessite remarcar ' + (d.isAulaUnica ? 'a aula' : 'qualquer aula do pacote') + ' por motivo justificado, deverá comunicar o(a) CONTRATANTE com antecedência e assegurar a integral reposição da carga horária em nova data compatível.</p>' +
+        '</div>' +
+
+        '<div class="text-justify">' +
+          '<h3 class="font-bold text-navy-800 uppercase text-xs tracking-wide mb-1">CLÁUSULA QUARTA – DO VALOR E DA FORMA DE PAGAMENTO</h3>' +
+          clausulaPagamentoHtml +
+        '</div>' +
+
+        '<div class="text-justify">' +
+          '<h3 class="font-bold text-navy-800 uppercase text-xs tracking-wide mb-1">CLÁUSULA QUINTA – DAS OBRIGAÇÕES DAS PARTES E PROPRIEDADE INTELECTUAL</h3>' +
+          '<p><strong>5.1. São obrigações do(a) CONTRATADO(A):</strong> (i) planejar e ministrar ' + (d.isAulaUnica ? 'a aula' : 'as aulas') + ' de Matemática com zelo técnico, clareza didática e adequação ao nível escolar do(a) aluno(a); (ii) cumprir rigorosamente os dias, horários e a carga horária ajustados neste instrumento; e (iii) manter sigilo sobre informações pessoais e desempenho acadêmico do(a) aluno(a), informando a evolução pedagógica ao(à) CONTRATANTE sempre que solicitado.</p>' +
+          '<p class="mt-1.5"><strong>5.2. São obrigações do(a) CONTRATANTE e do(a) ALUNO(A):</strong> (i) efetuar pontualmente o pagamento nos prazos e condições previstos na Cláusula Quarta; (ii) informar previamente os conteúdos programáticos, listas de exercícios ou tópicos de avaliação que deverão ser trabalhados; e (iii) dedicar-se às atividades propostas, mantendo postura respeitosa e colaborativa durante ' + (d.isAulaUnica ? 'a aula' : 'as aulas') + '.</p>' +
+          '<p class="mt-1.5"><strong>5.3.</strong> Os materiais didáticos, listas de exercícios autorais, resoluções comentadas e explicações fornecidos pelo(a) CONTRATADO(A) destinam-se exclusivamente ao uso individual de estudo do(a) aluno(a) ' + escapeHtml(d.nomeEfetivoAluno) + ', sendo vedada a gravação de imagem ou voz, reprodução, compartilhamento ou comercialização a terceiros sem autorização prévia e por escrito do(a) CONTRATADO(A), nos termos da Lei nº 9.610/1998 (Lei de Direitos Autorais).</p>' +
+        '</div>' +
+
+        '<div class="text-justify">' +
+          '<h3 class="font-bold text-navy-800 uppercase text-xs tracking-wide mb-1">CLÁUSULA SEXTA – DA VIGÊNCIA, RESCISÃO E FORO</h3>' +
+          '<p><strong>6.1.</strong> O presente contrato entra em vigor na data de sua assinatura e vigorará até a conclusão ' + (d.isAulaUnica ? 'da aula contratada' : 'do conjunto de aulas contratado') + ' e a integral quitação das obrigações financeiras.</p>' +
+          clausulaRescisao62 +
+          '<p class="mt-1.5"><strong>6.3.</strong> Para dirimir quaisquer controvérsias oriundas deste contrato, as partes elegem o Foro da Comarca de <strong>' + escapeHtml(d.cidadeContrato) + '/' + escapeHtml(d.estadoContrato) + '</strong>, com renúncia expressa a qualquer outro, por mais privilegiado que seja.</p>' +
+          '<p class="mt-2">E, por estarem assim justas e contratadas, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma (ou eletronicamente, nos termos do art. 10, § 2º, da MP nº 2.200-2/2001 e da Lei nº 14.063/2020), na presença de 2 (duas) testemunhas.</p>' +
+        '</div>' +
+
+        '<div class="text-center pt-2 font-medium">' +
+          escapeHtml(d.cidadeContrato) + '/' + escapeHtml(d.estadoContrato) + ', ' + escapeHtml(d.dataAssinaturaContrato) + '.' +
+        '</div>' +
+
+        '<div class="grid grid-cols-2 gap-6 pt-8 text-center text-xs">' +
+          '<div class="border-t border-slate-800 pt-1.5">' +
+            '<div class="font-bold">' + escapeHtml(d.profNome) + '</div>' +
+            '<div class="text-[11px] text-slate-600">CONTRATADO(A) — Professor(a) de Matemática</div>' +
+            '<div class="text-[11px] text-slate-600">CPF: ' + escapeHtml(d.profCPF) + '</div>' +
+          '</div>' +
+          '<div class="border-t border-slate-800 pt-1.5">' +
+            '<div class="font-bold">' + escapeHtml(d.contratanteNome) + '</div>' +
+            '<div class="text-[11px] text-slate-600">CONTRATANTE ' + (d.isMenor ? '(Responsável Legal)' : '(Aluno(a))') + '</div>' +
+            '<div class="text-[11px] text-slate-600">CPF: ' + escapeHtml(d.contratanteCPF) + '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="grid grid-cols-2 gap-6 pt-6 pb-2 text-center text-xs">' +
+          '<div class="border-t border-slate-700 pt-1.5">' +
+            '<div class="font-bold">Testemunha 1</div>' +
+            '<div class="text-[11px] text-slate-600 text-left">Nome: ' + escapeHtml(d.testemunha1Nome) + '</div>' +
+            '<div class="text-[11px] text-slate-600 text-left">CPF: ' + escapeHtml(d.testemunha1CPF) + '</div>' +
+          '</div>' +
+          '<div class="border-t border-slate-700 pt-1.5">' +
+            '<div class="font-bold">Testemunha 2</div>' +
+            '<div class="text-[11px] text-slate-600 text-left">Nome: ' + escapeHtml(d.testemunha2Nome) + '</div>' +
+            '<div class="text-[11px] text-slate-600 text-left">CPF: ' + escapeHtml(d.testemunha2CPF) + '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    // =========================================================================
+    // GERAÇÃO VETORIAL DO PDF PRONTO PARA BAIXAR E ASSINAR (jsPDF)
+    // =========================================================================
+    function generateAndDownloadPDF() {
+      var d = getContractData();
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        window.print();
+        return;
+      }
+
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+      var pageW = 210;
+      var pageH = 297;
+      var marginL = 18;
+      var marginR = 18;
+      var contentW = pageW - marginL - marginR;
+      var y = 20;
+
+      function drawHeaderFooter(pageNum, totalPages) {
+        doc.setFont('times', 'italic');
+        doc.setFontSize(8.5);
+        doc.setTextColor(90, 105, 125);
+        doc.text('Contrato de Prestação de Serviços Educacionais — Aulas Particulares de Matemática', marginL, 11);
+        doc.text('Página ' + pageNum + ' de ' + totalPages, pageW - marginR, 11, { align: 'right' });
+        doc.setDrawColor(160, 174, 192);
+        doc.setLineWidth(0.25);
+        doc.line(marginL, 12.8, pageW - marginR, 12.8);
+
+        doc.line(marginL, pageH - 13.5, pageW - marginR, pageH - 13.5);
+        doc.setFont('times', 'normal');
+        doc.setFontSize(7.5);
+        doc.text(
+          'Instrumento Particular de Prestação de Serviços regido pelos arts. 593 a 609 do Código Civil Brasileiro (Lei nº 10.406/2002).',
+          pageW / 2,
+          pageH - 9.5,
+          { align: 'center' }
+        );
+      }
+
+      function checkPageBreak(neededHeight) {
+        if (y + neededHeight > pageH - 18) {
+          doc.addPage();
+          y = 19;
+        }
+      }
+
+      function writeSectionHeading(title) {
+        checkPageBreak(10);
+        y += 2.5;
+        doc.setFont('times', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(24, 58, 108);
+        doc.text(title, marginL, y);
+        y += 4.5;
+      }
+
+      function writeParagraph(text, isBoldPrefix) {
+        doc.setFont('times', 'normal');
+        doc.setFontSize(9.6);
+        doc.setTextColor(20, 30, 45);
+        var lines = doc.splitTextToSize(text, contentW);
+        var lineH = 4.25;
+        checkPageBreak(lines.length * lineH + 2);
+        for (var i = 0; i < lines.length; i++) {
+          doc.text(lines[i], marginL, y);
+          y += lineH;
+        }
+        y += 1.6;
+      }
+
+      // Título Principal
+      doc.setFont('times', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(24, 58, 108);
+      doc.text('CONTRATO DE PRESTAÇÃO DE SERVIÇOS EDUCACIONAIS', pageW / 2, y, { align: 'center' });
+      y += 5;
+
+      doc.setFontSize(10.5);
+      doc.setTextColor(30, 41, 59);
+      var subtitulo = (d.isAulaUnica ? 'Aula Particular' : 'Aulas Particulares') +
+        ' de Matemática — Modalidade ' + (d.isOnline ? 'Online' : 'Presencial');
+      doc.text(subtitulo, pageW / 2, y, { align: 'center' });
+      y += 5.5;
+
+      writeParagraph(
+        'Pelo presente instrumento particular de prestação de serviços educacionais, as partes abaixo qualificadas celebram o presente Contrato, que se regerá pelos artigos 593 a 609 do Código Civil Brasileiro (Lei nº 10.406/2002) e pelas cláusulas e condições a seguir estipuladas.'
+      );
+
+      // 1. Qualificação das Partes
+      writeSectionHeading('1. QUALIFICAÇÃO DAS PARTES');
+
+      writeParagraph(
+        'CONTRATADO(A) (PROFESSOR(A)): ' + d.profNome + ', ' + d.profNacionalidade + ', ' +
+        d.profEstadoCivil + ', ' + d.profProfissao + ', portador(a) da Cédula de Identidade RG nº ' +
+        d.profRG + ' e inscrito(a) no CPF sob o nº ' + d.profCPF + ', residente e domiciliado(a) em ' +
+        d.profEndereco + ', telefone ' + d.profTelefone + ', e-mail ' + d.profEmail + '.'
+      );
+
+      if (d.isMenor) {
+        writeParagraph(
+          'CONTRATANTE (RESPONSÁVEL LEGAL): ' + d.contratanteNome + ', ' + d.contratanteNacionalidade + ', ' +
+          d.contratanteEstadoCivil + ', ' + d.contratanteProfissao + ', portador(a) da Cédula de Identidade RG nº ' +
+          d.contratanteRG + ' e inscrito(a) no CPF sob o nº ' + d.contratanteCPF + ', residente e domiciliado(a) em ' +
+          d.contratanteEndereco + ', telefone ' + d.contratanteTelefone + ', e-mail ' + d.contratanteEmail +
+          ', neste ato representando legalmente, na qualidade de ' + d.alunoMenorParentesco + ', o(a) aluno(a) menor de idade:'
+        );
+        writeParagraph(
+          'ALUNO(A) BENEFICIÁRIO(A): ' + d.alunoMenorNome + ', menor de idade, nascido(a) em ' +
+          d.alunoMenorDataNasc + ', cursando ' + d.alunoAnoEscolar + ', residente e domiciliado(a) no mesmo endereço do(a) CONTRATANTE.'
+        );
+      } else {
+        writeParagraph(
+          'CONTRATANTE E ALUNO(A): ' + d.contratanteNome + ', ' + d.contratanteNacionalidade + ', ' +
+          d.contratanteEstadoCivil + ', ' + d.contratanteProfissao + ', portador(a) da Cédula de Identidade RG nº ' +
+          d.contratanteRG + ' e inscrito(a) no CPF sob o nº ' + d.contratanteCPF + ', residente e domiciliado(a) em ' +
+          d.contratanteEndereco + ', telefone ' + d.contratanteTelefone + ', e-mail ' + d.contratanteEmail +
+          ', cursando ' + d.alunoAnoEscolar + '.'
+        );
+      }
+
+      // Quadro-Resumo
+      writeSectionHeading('QUADRO-RESUMO DOS SERVIÇOS CONTRATADOS');
+
+      var summaryRows = [
+        ['Aluno(a) Beneficiário(a)', d.nomeEfetivoAluno + ' (' + d.alunoAnoEscolar + ')'],
+        ['Disciplina e Foco', 'Matemática — ' + d.conteudoMatematica],
+        ['Modalidade de Ensino', d.isOnline ? ('Online (Remota) via plataforma ' + d.plataformaOnline) : ('Presencial em ' + d.localAulaPresencial)],
+        ['Regime de Contratação', d.isAulaUnica ? ('Aula Única (Avulsa) — ' + d.dataHoraAulaUnica) : ('Conjunto de Aulas — ' + d.quantidadeTotalAulas + ' (' + d.cronogramaAulas + ')')],
+        ['Duração da Hora-Aula', d.duracaoHoraAula]
+      ];
+      if (d.isAulaUnica) {
+        summaryRows.push(['Valor Único Contratado', d.valorAulaUnica + ' (Vencimento: ' + d.vencimentoAulaUnica + ')']);
+      } else {
+        summaryRows.push(['Valor Total Integral', d.valorTotalPacote]);
+        summaryRows.push(['Parcelamento Acordado', d.numeroParcelas + ' parcela(s) de ' + d.valorCadaParcela + ' (' + d.datasVencimentoParcelas + ')']);
+      }
+      summaryRows.push(['Dados para Pagamento', d.profPagamento]);
+
+      doc.setDrawColor(24, 58, 108);
+      doc.setLineWidth(0.45);
+      doc.line(marginL, y - 2, pageW - marginR, y - 2);
+      y += 2;
+
+      var col1W = 46;
+      var col2W = contentW - col1W;
+      for (var r = 0; r < summaryRows.length; r++) {
+        var label = summaryRows[r][0];
+        var val = summaryRows[r][1];
+        doc.setFont('times', 'normal');
+        doc.setFontSize(9.2);
+        var valLines = doc.splitTextToSize(val, col2W);
+        var rowH = Math.max(1, valLines.length) * 4.1 + 1.2;
+        checkPageBreak(rowH + 2);
+
+        doc.setFont('times', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text(label, marginL, y);
+
+        doc.setFont('times', 'normal');
+        doc.setTextColor(20, 30, 45);
+        for (var vl = 0; vl < valLines.length; vl++) {
+          doc.text(valLines[vl], marginL + col1W, y + vl * 4.1);
+        }
+        y += rowH;
+      }
+
+      doc.setDrawColor(24, 58, 108);
+      doc.setLineWidth(0.45);
+      doc.line(marginL, y - 1.5, pageW - marginR, y - 1.5);
+      y += 2;
+
+      // Cláusula 1
+      writeSectionHeading('CLÁUSULA PRIMEIRA – DO OBJETO DO CONTRATO');
+      if (d.isAulaUnica) {
+        writeParagraph(
+          '1.1. O presente contrato tem por objeto a prestação de serviços educacionais personalizados pelo(a) CONTRATADO(A) em favor do(a) aluno(a) ' +
+          d.nomeEfetivoAluno + ', consistindo em uma única aula particular de Matemática, com foco em ' +
+          d.conteudoMatematica + ', agendada para ' + d.dataHoraAulaUnica + ', com duração de ' + d.duracaoHoraAula + '.'
+        );
+      } else {
+        writeParagraph(
+          '1.1. O presente contrato tem por objeto a prestação de serviços educacionais personalizados pelo(a) CONTRATADO(A) em favor do(a) aluno(a) ' +
+          d.nomeEfetivoAluno + ', consistindo em um conjunto de ' + d.quantidadeTotalAulas + ' particulares de Matemática, com foco em ' +
+          d.conteudoMatematica + ', a serem realizadas no período de ' + d.periodoVigenciaPacote + ', conforme o cronograma de ' +
+          d.cronogramaAulas + ', tendo cada aula a duração de ' + d.duracaoHoraAula + '.'
+        );
+      }
+      writeParagraph(
+        '1.2. O serviço prestado tem finalidade estritamente pedagógica de reforço escolar, acompanhamento curricular, esclarecimento de dúvidas e resolução orientada de exercícios, caracterizando obrigação de meio e não de resultado, não implicando garantia de aprovação automática em provas, exames escolares, concursos ou vestibulares.'
+      );
+
+      // Cláusula 2
+      writeSectionHeading('CLÁUSULA SEGUNDA – DA MODALIDADE DE REALIZAÇÃO (' + (d.isOnline ? 'ONLINE' : 'PRESENCIAL') + ')');
+      if (d.isOnline) {
+        writeParagraph(
+          '2.1. Fica expressamente ajustado entre as partes que ' + (d.isAulaUnica ? 'a aula será realizada' : 'o conjunto de aulas será realizado') +
+          ' de forma ONLINE (remota), em tempo real (síncrona), por meio da plataforma de videoconferência ' + d.plataformaOnline +
+          ' (ou outra ferramenta equivalente acordada entre as partes).'
+        );
+        writeParagraph(
+          '2.2. Compete a ambas as partes dispor de conexão estável à internet, computador, tablet ou dispositivo compatível, bem como recursos funcionais de áudio e vídeo no horário agendado. O link de acesso à sala virtual será disponibilizado pelo(a) CONTRATADO(A) com antecedência mínima de 10 (dez) minutos antes do início ' +
+          (d.isAulaUnica ? 'da aula.' : 'de cada aula.')
+        );
+        writeParagraph(
+          '2.3. Caso ocorra falha técnica comprovada de conexão ou interrupção de energia elétrica que inviabilize a continuidade da transmissão por período superior a 15 (quinze) minutos, o tempo restante será integralmente reposto em nova data e horário ajustados em comum acordo, sem custo adicional ao(à) CONTRATANTE.'
+        );
+      } else {
+        writeParagraph(
+          '2.1. Fica expressamente ajustado entre as partes que ' + (d.isAulaUnica ? 'a aula será realizada' : 'o conjunto de aulas será realizado') +
+          ' de forma PRESENCIAL, no seguinte endereço: ' + d.localAulaPresencial + '.'
+        );
+        writeParagraph(
+          '2.2. O local destinado ' + (d.isAulaUnica ? 'à aula presencial' : 'às aulas presenciais') +
+          ' deverá dispor de mesa ou bancada adequada, iluminação suficiente, silêncio e condições propícias à concentração e ao estudo da disciplina de Matemática.'
+        );
+        writeParagraph(
+          '2.3. ' + (d.isMenor
+            ? 'Tratando-se de aluno(a) menor de idade, quando a aula ocorrer na residência do(a) aluno(a), recomenda-se a permanência de um adulto responsável no imóvel durante todo o período da aula.'
+            : 'As partes comprometem-se a observar rigorosamente as normas de convivência, segurança e pontualidade no local designado.')
+        );
+      }
+
+      // Cláusula 3
+      writeSectionHeading('CLÁUSULA TERCEIRA – DA PONTUALIDADE, REMARCAÇÃO E FALTAS');
+      writeParagraph(
+        '3.1. O horário de início e término ' + (d.isAulaUnica ? 'da aula' : 'de cada aula') +
+        ' seguirá pontualmente o agendamento estabelecido. Haverá tolerância máxima de ' + d.toleranciaAtraso +
+        ' para o comparecimento do(a) aluno(a). Eventual atraso por parte do(a) aluno(a) não acarretará prorrogação do horário de término nem redução do valor ajustado.'
+      );
+      writeParagraph(
+        '3.2. Solicitações de cancelamento ou remarcação por parte do(a) CONTRATANTE deverão ser comunicadas ao(à) CONTRATADO(A) com antecedência mínima de ' +
+        d.antecedenciaRemarcacao + ', hipótese em que a aula será reagendada conforme disponibilidade de agenda de ambas as partes.'
+      );
+      writeParagraph(
+        '3.3. O não comparecimento do(a) aluno(a) sem aviso prévio ou o pedido de cancelamento formulado com antecedência inferior a ' +
+        d.antecedenciaRemarcacao + ' (salvo motivo de força maior ou enfermidade devidamente comprovada) ensejará a contabilização da aula como efetivamente ministrada, sem direito a reposição ou restituição de valores.'
+      );
+      writeParagraph(
+        '3.4. Caso o(a) CONTRATADO(A) necessite remarcar ' + (d.isAulaUnica ? 'a aula' : 'qualquer aula do pacote') +
+        ' por motivo justificado, deverá comunicar o(a) CONTRATANTE com antecedência e assegurar a integral reposição da carga horária em nova data compatível para o(a) aluno(a).'
+      );
+
+      // Cláusula 4
+      writeSectionHeading('CLÁUSULA QUARTA – DO VALOR E DA FORMA DE PAGAMENTO');
+      if (d.isAulaUnica) {
+        writeParagraph(
+          '4.1. Pela prestação do serviço referente à aula única objeto deste instrumento, o(a) CONTRATANTE pagará ao(à) CONTRATADO(A) o valor único de ' + d.valorAulaUnica + '.'
+        );
+        writeParagraph(
+          '4.2. O pagamento do valor único deverá ser efetuado ' + d.vencimentoAulaUnica +
+          ', mediante transferência bancária ou PIX para os seguintes dados do(a) CONTRATADO(A): ' + d.profPagamento +
+          ', servindo o comprovante de transação como recibo de quitação.'
+        );
+        writeParagraph(
+          '4.3. O atraso no pagamento de qualquer importância devida por força deste contrato sujeitará o(a) CONTRATANTE ao acréscimo de multa moratória de 2% (dois por cento) sobre o valor em aberto, acrescida de juros de mora de 1% (um por cento) ao mês (pro rata die) e atualização monetária pelo índice IPCA/IBGE.'
+        );
+      } else {
+        writeParagraph(
+          '4.1. Pela prestação dos serviços referentes ao conjunto de ' + d.quantidadeTotalAulas +
+          ' objeto deste instrumento, o(a) CONTRATANTE pagará ao(à) CONTRATADO(A) o valor total integral de ' + d.valorTotalPacote + '.'
+        );
+        writeParagraph(
+          '4.2. O valor integral acima estipulado será pago em ' + d.numeroParcelas +
+          ' parcela(s) iguais e sucessivas no valor de ' + d.valorCadaParcela +
+          ' cada uma, com vencimento em ' + d.datasVencimentoParcelas + '.'
+        );
+        writeParagraph(
+          '4.3. Os pagamentos deverão ser efetuados mediante transferência bancária ou PIX para os seguintes dados do(a) CONTRATADO(A): ' +
+          d.profPagamento + ', servindo os respectivos comprovantes de transação como recibo de quitação de cada parcela.'
+        );
+        writeParagraph(
+          '4.4. O atraso no pagamento de qualquer importância devida por força deste contrato sujeitará o(a) CONTRATANTE ao acréscimo de multa moratória de 2% (dois por cento) sobre o valor em aberto, acrescida de juros de mora de 1% (um por cento) ao mês (pro rata die) e atualização monetária pelo índice IPCA/IBGE, além de facultar ao(à) CONTRATADO(A) a suspensão de aulas subsequentes até a efetiva regularização do débito.'
+        );
+      }
+
+      // Cláusula 5
+      writeSectionHeading('CLÁUSULA QUINTA – DAS OBRIGAÇÕES DAS PARTES E PROPRIEDADE INTELECTUAL');
+      writeParagraph(
+        '5.1. São obrigações do(a) CONTRATADO(A): (i) planejar e ministrar ' + (d.isAulaUnica ? 'a aula' : 'as aulas') +
+        ' de Matemática com zelo técnico, clareza didática e adequação ao nível escolar do(a) aluno(a); (ii) cumprir rigorosamente os dias, horários e a carga horária ajustados neste instrumento; e (iii) manter sigilo sobre informações pessoais e desempenho acadêmico do(a) aluno(a), informando a evolução pedagógica ao(à) CONTRATANTE sempre que solicitado.'
+      );
+      writeParagraph(
+        '5.2. São obrigações do(a) CONTRATANTE e do(a) ALUNO(A): (i) efetuar pontualmente o pagamento nos prazos e condições previstos na Cláusula Quarta; (ii) informar previamente os conteúdos programáticos, listas de exercícios ou tópicos de avaliação que deverão ser trabalhados; e (iii) dedicar-se às atividades propostas, mantendo postura respeitosa e colaborativa durante ' +
+        (d.isAulaUnica ? 'a aula.' : 'as aulas.')
+      );
+      writeParagraph(
+        '5.3. Os materiais didáticos, listas de exercícios autorais, resoluções comentadas e explicações fornecidos pelo(a) CONTRATADO(A) destinam-se exclusivamente ao uso individual de estudo do(a) aluno(a) ' +
+        d.nomeEfetivoAluno + ', sendo vedada a gravação de imagem ou voz, reprodução, compartilhamento ou comercialização a terceiros sem autorização prévia e por escrito do(a) CONTRATADO(A), nos termos da Lei nº 9.610/1998 (Lei de Direitos Autorais).'
+      );
+
+      // Cláusula 6
+      writeSectionHeading('CLÁUSULA SEXTA – DA VIGÊNCIA, RESCISÃO E FORO');
+      writeParagraph(
+        '6.1. O presente contrato entra em vigor na data de sua assinatura e vigorará até a conclusão ' +
+        (d.isAulaUnica ? 'da aula contratada' : 'do conjunto de aulas contratado') + ' e a integral quitação das obrigações financeiras.'
+      );
+      if (d.isAulaUnica) {
+        writeParagraph(
+          '6.2. Em caso de desistência imotivada da aula única com antecedência inferior a ' + d.antecedenciaRemarcacao + ', aplicar-se-á o disposto no item 3.3 deste contrato.'
+        );
+      } else {
+        writeParagraph(
+          '6.2. Qualquer das partes poderá rescindir o presente contrato mediante comunicação prévia por escrito (inclusive por e-mail ou aplicativo de mensagens) com antecedência mínima de 7 (sete) dias. Na hipótese de rescisão antecipada, proceder-se-á à apuração proporcional das aulas efetivamente ministradas até a data do encerramento: havendo saldo de aulas já pagas e não ministradas, o valor correspondente será restituído pelo(a) CONTRATADO(A) em até 10 (dez) dias úteis; havendo aulas já ministradas e ainda não quitadas nas parcelas vencidas, o saldo devedor proporcional vencerá antecipadamente, devendo ser quitado pelo(a) CONTRATANTE no mesmo prazo.'
+        );
+      }
+      writeParagraph(
+        '6.3. Para dirimir quaisquer controvérsias oriundas deste contrato, as partes elegem o Foro da Comarca de ' +
+        d.cidadeContrato + '/' + d.estadoContrato + ', com renúncia expressa a qualquer outro, por mais privilegiado que seja.'
+      );
+      writeParagraph(
+        'E, por estarem assim justas e contratadas, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma (ou eletronicamente, nos termos do art. 10, § 2º, da MP nº 2.200-2/2001 e da Lei nº 14.063/2020), na presença de 2 (duas) testemunhas.'
+      );
+
+      // Bloco de Assinaturas (garantir que não quebre no meio)
+      checkPageBreak(52);
+      y += 4;
+      doc.setFont('times', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(20, 30, 45);
+      doc.text(d.cidadeContrato + '/' + d.estadoContrato + ', ' + d.dataAssinaturaContrato + '.', pageW / 2, y, { align: 'center' });
+
+      y += 16;
+      var sigW = (contentW - 14) / 2;
+      var leftX = marginL;
+      var rightX = marginL + sigW + 14;
+
+      doc.setDrawColor(30, 41, 59);
+      doc.setLineWidth(0.35);
+      doc.line(leftX, y, leftX + sigW, y);
+      doc.line(rightX, y, rightX + sigW, y);
+
+      y += 4.2;
+      doc.setFont('times', 'bold');
+      doc.setFontSize(9.2);
+      doc.text(d.profNome, leftX + sigW / 2, y, { align: 'center', maxWidth: sigW });
+      doc.text(d.contratanteNome, rightX + sigW / 2, y, { align: 'center', maxWidth: sigW });
+
+      y += 4;
+      doc.setFont('times', 'normal');
+      doc.setFontSize(8.2);
+      doc.setTextColor(71, 85, 105);
+      doc.text('CONTRATADO(A) — Professor(a) de Matemática', leftX + sigW / 2, y, { align: 'center' });
+      doc.text('CONTRATANTE ' + (d.isMenor ? '(Responsável Legal)' : '(Aluno(a))'), rightX + sigW / 2, y, { align: 'center' });
+
+      y += 3.8;
+      doc.text('CPF: ' + d.profCPF, leftX + sigW / 2, y, { align: 'center' });
+      doc.text('CPF: ' + d.contratanteCPF, rightX + sigW / 2, y, { align: 'center' });
+
+      // Testemunhas
+      y += 15;
+      doc.setDrawColor(30, 41, 59);
+      doc.line(leftX, y, leftX + sigW, y);
+      doc.line(rightX, y, rightX + sigW, y);
+
+      y += 4.2;
+      doc.setFont('times', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(20, 30, 45);
+      doc.text('Testemunha 1', leftX + sigW / 2, y, { align: 'center' });
+      doc.text('Testemunha 2', rightX + sigW / 2, y, { align: 'center' });
+
+      y += 4.2;
+      doc.setFont('times', 'normal');
+      doc.setFontSize(8.2);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Nome: ' + (d.testemunha1Nome || ''), leftX, y);
+      doc.text('Nome: ' + (d.testemunha2Nome || ''), rightX, y);
+
+      y += 4;
+      doc.text('CPF: ' + (d.testemunha1CPF || ''), leftX, y);
+      doc.text('CPF: ' + (d.testemunha2CPF || ''), rightX, y);
+
+      // Numerar todas as páginas no cabeçalho e rodapé
+      var totalPages = doc.getNumberOfPages();
+      for (var p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        drawHeaderFooter(p, totalPages);
+      }
+
+      var slugAluno = (d.nomeEfetivoAluno || 'Aluno')
+        .replace(/\[.*?\]/g, 'Aluno')
+        .trim()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-zA-Z0-9_-]/g, '');
+      var fileName = 'Contrato_Aulas_Matematica_' + (slugAluno || 'Aluno') + '.pdf';
+      doc.save(fileName);
+      showToast('PDF "' + fileName + '" gerado e baixado com sucesso!');
+    }
+
+    // =========================================================================
+    // GERAÇÃO DO CÓDIGO LATEX (.tex) PREENCHIDO COM OS DADOS DO FORMULÁRIO
+    // =========================================================================
+    function buildFilledLatexCode() {
+      var d = getContractData();
+      function texEsc(s) {
+        return String(s || '').replace(/\\/g, '').replace(/\$/g, '\\$').replace(/%/g, '\\%').replace(/&/g, '\\&').replace(/_/g, '\\_');
+      }
+      var lines = [
+        '\\documentclass[10pt,a4paper]{article}',
+        '\\usepackage[a4paper, top=16mm, bottom=16mm, left=18mm, right=18mm]{geometry}',
+        '\\usepackage[T1]{fontenc}',
+        '\\usepackage{charter}',
+        '\\usepackage{amsmath,amssymb}',
+        '\\usepackage{booktabs}',
+        '\\usepackage{tabularx}',
+        '\\usepackage{xcolor}',
+        '\\usepackage{fancyhdr}',
+        '\\usepackage{hyperref}',
+        '\\usepackage{microtype}',
+        '',
+        '% ==============================================================================',
+        '% PAINEL DE CONFIGURAÇÃO DO CONTRATO (PREENCHIDO PELO GERADOR HTML)',
+        '% ==============================================================================',
+        '\\newif\\ifAlunoMenor',
+        d.isMenor ? '\\AlunoMenortrue' : '\\AlunoMenorfalse',
+        '',
+        '\\newif\\ifModalidadeOnline',
+        d.isOnline ? '\\ModalidadeOnlinetrue' : '\\ModalidadeOnlinefalse',
+        '',
+        '\\newif\\ifAulaUnica',
+        d.isAulaUnica ? '\\AulaUnicatrue' : '\\AulaUnicafalse',
+        '',
+        '\\newcommand{\\ProfNome}{' + texEsc(d.profNome) + '}',
+        '\\newcommand{\\ProfNacionalidade}{' + texEsc(d.profNacionalidade) + '}',
+        '\\newcommand{\\ProfEstadoCivil}{' + texEsc(d.profEstadoCivil) + '}',
+        '\\newcommand{\\ProfProfissao}{' + texEsc(d.profProfissao) + '}',
+        '\\newcommand{\\ProfRG}{' + texEsc(d.profRG) + '}',
+        '\\newcommand{\\ProfCPF}{' + texEsc(d.profCPF) + '}',
+        '\\newcommand{\\ProfEndereco}{' + texEsc(d.profEndereco) + '}',
+        '\\newcommand{\\ProfTelefone}{' + texEsc(d.profTelefone) + '}',
+        '\\newcommand{\\ProfEmail}{' + texEsc(d.profEmail) + '}',
+        '\\newcommand{\\ProfDadosPagamento}{' + texEsc(d.profPagamento) + '}',
+        '',
+        '\\newcommand{\\ContratanteNome}{' + texEsc(d.contratanteNome) + '}',
+        '\\newcommand{\\ContratanteNacionalidade}{' + texEsc(d.contratanteNacionalidade) + '}',
+        '\\newcommand{\\ContratanteEstadoCivil}{' + texEsc(d.contratanteEstadoCivil) + '}',
+        '\\newcommand{\\ContratanteProfissao}{' + texEsc(d.contratanteProfissao) + '}',
+        '\\newcommand{\\ContratanteRG}{' + texEsc(d.contratanteRG) + '}',
+        '\\newcommand{\\ContratanteCPF}{' + texEsc(d.contratanteCPF) + '}',
+        '\\newcommand{\\ContratanteEndereco}{' + texEsc(d.contratanteEndereco) + '}',
+        '\\newcommand{\\ContratanteTelefone}{' + texEsc(d.contratanteTelefone) + '}',
+        '\\newcommand{\\ContratanteEmail}{' + texEsc(d.contratanteEmail) + '}',
+        '',
+        '\\newcommand{\\AlunoMenorNome}{' + texEsc(d.alunoMenorNome) + '}',
+        '\\newcommand{\\AlunoMenorDataNasc}{' + texEsc(d.alunoMenorDataNasc) + '}',
+        '\\newcommand{\\AlunoMenorParentesco}{' + texEsc(d.alunoMenorParentesco) + '}',
+        '\\newcommand{\\AlunoAnoEscolar}{' + texEsc(d.alunoAnoEscolar) + '}',
+        '\\newcommand{\\ConteudoMatematica}{' + texEsc(d.conteudoMatematica) + '}',
+        '\\newcommand{\\NomeEfetivoAluno}{\\ifAlunoMenor\\AlunoMenorNome\\else\\ContratanteNome\\fi}',
+        '',
+        '\\newcommand{\\PlataformaOnline}{' + texEsc(d.plataformaOnline) + '}',
+        '\\newcommand{\\LocalAulaPresencial}{' + texEsc(d.localAulaPresencial) + '}',
+        '',
+        '\\newcommand{\\DuracaoHoraAula}{' + texEsc(d.duracaoHoraAula) + '}',
+        '\\newcommand{\\AntecedenciaRemarcacao}{' + texEsc(d.antecedenciaRemarcacao) + '}',
+        '\\newcommand{\\ToleranciaAtraso}{' + texEsc(d.toleranciaAtraso) + '}',
+        '',
+        '\\newcommand{\\DataHoraAulaUnica}{' + texEsc(d.dataHoraAulaUnica) + '}',
+        '\\newcommand{\\ValorAulaUnica}{' + texEsc(d.valorAulaUnica) + '}',
+        '\\newcommand{\\VencimentoAulaUnica}{' + texEsc(d.vencimentoAulaUnica) + '}',
+        '',
+        '\\newcommand{\\QuantidadeTotalAulas}{' + texEsc(d.quantidadeTotalAulas) + '}',
+        '\\newcommand{\\CronogramaAulas}{' + texEsc(d.cronogramaAulas) + '}',
+        '\\newcommand{\\PeriodoVigenciaPacote}{' + texEsc(d.periodoVigenciaPacote) + '}',
+        '\\newcommand{\\ValorTotalPacote}{' + texEsc(d.valorTotalPacote) + '}',
+        '\\newcommand{\\NumeroParcelas}{' + texEsc(d.numeroParcelas) + '}',
+        '\\newcommand{\\ValorCadaParcela}{' + texEsc(d.valorCadaParcela) + '}',
+        '\\newcommand{\\DatasVencimentoParcelas}{' + texEsc(d.datasVencimentoParcelas) + '}',
+        '',
+        '\\newcommand{\\CidadeContrato}{' + texEsc(d.cidadeContrato) + '}',
+        '\\newcommand{\\EstadoContrato}{' + texEsc(d.estadoContrato) + '}',
+        '\\newcommand{\\DataAssinaturaContrato}{' + texEsc(d.dataAssinaturaContrato) + '}'
+      ];
+      return lines.join('\n');
+    }
+
+    // =========================================================================
+    // PERSISTÊNCIA DOS DADOS DO PROFESSOR E BOTÕES DE EXEMPLO
+    // =========================================================================
+    function saveProfDataToStorage() {
+      var profFields = [
+        'profNome', 'profNacionalidade', 'profEstadoCivil', 'profProfissao',
+        'profRG', 'profCPF', 'profTelefone', 'profEmail', 'profEndereco', 'profPagamento'
+      ];
+      var payload = {};
+      for (var i = 0; i < profFields.length; i++) {
+        var k = profFields[i];
+        var el = document.getElementById(k);
+        if (el) payload[k] = el.value;
+      }
+      try {
+        localStorage.setItem('contrato_mat_prof_data_v1', JSON.stringify(payload));
+        showToast('Seus dados de Professor(a) foram salvos como padrão neste navegador!');
+      } catch (e) {
+        showToast('Dados atualizados na sessão atual.');
+      }
+    }
+
+    function loadProfDataFromStorage() {
+      try {
+        var raw = localStorage.getItem('contrato_mat_prof_data_v1');
+        if (!raw) return;
+        var payload = JSON.parse(raw);
+        for (var k in payload) {
+          if (Object.prototype.hasOwnProperty.call(payload, k)) {
+            var el = document.getElementById(k);
+            if (el && payload[k]) el.value = payload[k];
+          }
+        }
+      } catch (e) {
+        // Ignorar bloqueio de storage no sandbox
+      }
+    }
+
+    function fillDemoData() {
+      document.getElementById('profNome').value = 'Prof. Rafael Henrique Mendes';
+      document.getElementById('profNacionalidade').value = 'brasileiro';
+      document.getElementById('profEstadoCivil').value = 'casado';
+      document.getElementById('profProfissao').value = 'Professor de Matemática';
+      document.getElementById('profRG').value = '10.458.921-3 SSP/PR';
+      document.getElementById('profCPF').value = '084.512.369-40';
+      document.getElementById('profTelefone').value = '(44) 99812-3456';
+      document.getElementById('profEmail').value = 'rafael.matematica@email.com.br';
+      document.getElementById('profEndereco').value = 'Av. Brasil, nº 4200, Sala 302, Zona 01, CEP 87013-000, Maringá/PR';
+      document.getElementById('profPagamento').value = 'Chave PIX (CPF): 084.512.369-40 — Banco Itaú (341), Ag. 0412, C/C 78945-1';
+
+      document.getElementById('contratanteNome').value = 'Mariana Ferreira Souza';
+      document.getElementById('contratanteNacionalidade').value = 'brasileira';
+      document.getElementById('contratanteEstadoCivil').value = 'casada';
+      document.getElementById('contratanteProfissao').value = 'Arquiteta';
+      document.getElementById('contratanteRG').value = '8.912.345-7 SSP/PR';
+      document.getElementById('contratanteCPF').value = '052.741.896-12';
+      document.getElementById('contratanteTelefone').value = '(44) 99123-7890';
+      document.getElementById('contratanteEmail').value = 'mariana.souza@email.com.br';
+      document.getElementById('contratanteEndereco').value = 'Rua Neo Alves Martins, nº 1850, Apto 801, Zona 01, CEP 87013-060, Maringá/PR';
+
+      document.getElementById('alunoMenorNome').value = 'Lucas Ferreira Souza';
+      document.getElementById('alunoMenorDataNasc').value = '14/05/2010';
+      document.getElementById('alunoMenorParentesco').value = 'mãe e representante legal';
+      document.getElementById('alunoAnoEscolar').value = '2º Ano do Ensino Médio';
+      document.getElementById('conteudoMatematica').value = 'Trigonometria, Geometria Analítica, Funções e Revisão ENEM';
+
+      document.getElementById('plataformaOnline').value = 'Google Meet';
+      document.getElementById('localAulaPresencial').value = 'Rua Neo Alves Martins, nº 1850, Apto 801, Zona 01, Maringá/PR';
+
+      document.getElementById('qtdAulasNum').value = '12';
+      document.getElementById('valorTotalPacoteNum').value = '1.200,00';
+      document.getElementById('numeroParcelasNum').value = '3';
+      appState.autoCalcParcela = true;
+      document.getElementById('datasVencimentoParcelas').value = 'todo dia 10 de cada mês, vencendo a 1ª parcela em 10/11/2026';
+      document.getElementById('cronogramaAulas').value = 'terças e quintas-feiras, das 15h00 às 16h00';
+      document.getElementById('periodoVigenciaPacote').value = '20/10/2026 a 26/11/2026';
+
+      document.getElementById('dataHoraAulaUnica').value = '22/10/2026, das 15h00 às 16h00';
+      document.getElementById('valorUnicoNum').value = '120,00';
+
+      renderContractPreview();
+      showToast('Dados de exemplo preenchidos! Você já pode testar a geração do PDF.');
+    }
+
+    function clearFormFields() {
+      var textInputs = [
+        'contratanteNome', 'contratanteEstadoCivil', 'contratanteProfissao',
+        'contratanteRG', 'contratanteCPF', 'contratanteTelefone', 'contratanteEmail',
+        'contratanteEndereco', 'alunoMenorNome', 'alunoMenorDataNasc',
+        'alunoAnoEscolar', 'conteudoMatematica', 'testemunha1Nome', 'testemunha1CPF',
+        'testemunha2Nome', 'testemunha2CPF'
+      ];
+      for (var i = 0; i < textInputs.length; i++) {
+        var el = document.getElementById(textInputs[i]);
+        if (el) el.value = '';
+      }
+      renderContractPreview();
+      showToast('Campos do contratante/aluno limpos para novo preenchimento.');
+    }
+
+    // =========================================================================
+    // INICIALIZAÇÃO DE EVENTOS
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', function () {
+      loadProfDataFromStorage();
+
+      // Chaves lógicas
+      document.getElementById('optMenorSim').addEventListener('click', function () {
+        appState.isMenor = true;
+        syncOptionButtonsUI();
+        renderContractPreview();
+      });
+      document.getElementById('optMenorNao').addEventListener('click', function () {
+        appState.isMenor = false;
+        syncOptionButtonsUI();
+        renderContractPreview();
+      });
+
+      document.getElementById('optModOnline').addEventListener('click', function () {
+        appState.isOnline = true;
+        syncOptionButtonsUI();
+        renderContractPreview();
+      });
+      document.getElementById('optModPresencial').addEventListener('click', function () {
+        appState.isOnline = false;
+        syncOptionButtonsUI();
+        renderContractPreview();
+      });
+
+      document.getElementById('optRegimeUnica').addEventListener('click', function () {
+        appState.isAulaUnica = true;
+        syncOptionButtonsUI();
+        renderContractPreview();
+      });
+      document.getElementById('optRegimePacote').addEventListener('click', function () {
+        appState.isAulaUnica = false;
+        syncOptionButtonsUI();
+        renderContractPreview();
+      });
+
+      // Máscaras de CPF e Telefone
+      var cpfIds = ['profCPF', 'contratanteCPF', 'testemunha1CPF', 'testemunha2CPF'];
+      cpfIds.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', function () {
+            el.value = formatCPFMask(el.value);
+            renderContractPreview();
+          });
+        }
+      });
+
+      var phoneIds = ['profTelefone', 'contratanteTelefone'];
+      phoneIds.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', function () {
+            el.value = formatPhoneMask(el.value);
+            renderContractPreview();
+          });
+        }
+      });
+
+      // Cálculo automático de parcela ao alterar valor total ou número de parcelas
+      document.getElementById('valorTotalPacoteNum').addEventListener('input', function () {
+        appState.autoCalcParcela = true;
+        renderContractPreview();
+      });
+      document.getElementById('numeroParcelasNum').addEventListener('input', function () {
+        appState.autoCalcParcela = true;
+        renderContractPreview();
+      });
+      document.getElementById('valorCadaParcelaNum').addEventListener('input', function () {
+        appState.autoCalcParcela = false;
+        renderContractPreview();
+      });
+
+      // Atualização em tempo real em todos os demais inputs
+      var allInputs = document.querySelectorAll('input, select');
+      for (var i = 0; i < allInputs.length; i++) {
+        allInputs[i].addEventListener('input', renderContractPreview);
+        allInputs[i].addEventListener('change', renderContractPreview);
+      }
+
+      // Botões de atalho para endereço presencial
+      document.getElementById('btnUsarEndAluno').addEventListener('click', function () {
+        var endAluno = document.getElementById('contratanteEndereco').value.trim();
+        if (endAluno) {
+          document.getElementById('localAulaPresencial').value = endAluno;
+          renderContractPreview();
+          showToast('Endereço do(a) Contratante copiado para o local da aula presencial.');
+        } else {
+          showToast('Preencha primeiro o endereço do(a) Contratante.');
+        }
+      });
+      document.getElementById('btnUsarEndProf').addEventListener('click', function () {
+        var endProf = document.getElementById('profEndereco').value.trim();
+        if (endProf) {
+          document.getElementById('localAulaPresencial').value = endProf;
+          renderContractPreview();
+          showToast('Seu endereço foi copiado para o local da aula presencial.');
+        } else {
+          showToast('Preencha primeiro o seu endereço.');
+        }
+      });
+
+      // Botões de Ação
+      document.getElementById('btnSaveProf').addEventListener('click', saveProfDataToStorage);
+      document.getElementById('btnFillDemo').addEventListener('click', fillDemoData);
+      document.getElementById('btnClearForm').addEventListener('click', clearFormFields);
+      document.getElementById('btnPrintContract').addEventListener('click', function () {
+        window.print();
+      });
+      document.getElementById('btnGeneratePdfTop').addEventListener('click', generateAndDownloadPDF);
+      document.getElementById('btnGeneratePdfBottom').addEventListener('click', generateAndDownloadPDF);
+
+      // Modal LaTeX
+      var modal = document.getElementById('latexModal');
+      document.getElementById('btnOpenLatex').addEventListener('click', function () {
+        document.getElementById('latexCodeOutput').textContent = buildFilledLatexCode();
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+      document.getElementById('btnCloseLatexModal').addEventListener('click', function () {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      });
+      document.getElementById('btnCopyLatex').addEventListener('click', function () {
+        var code = buildFilledLatexCode();
+        var ta = document.createElement('textarea');
+        ta.value = code;
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('Preâmbulo LaTeX copiado para a área de transferência!');
+        } catch (e) {
+          showToast('Não foi possível copiar automaticamente.');
+        }
+        document.body.removeChild(ta);
+      });
+      document.getElementById('btnDownloadLatex').addEventListener('click', function () {
+        var code = buildFilledLatexCode();
+        var blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'preambulo_contrato_matematica.tex';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Arquivo preambulo_contrato_matematica.tex baixado!');
+      });
+
+      syncOptionButtonsUI();
+      renderContractPreview();
+    });
+  </script>
+</body>
+</html>
