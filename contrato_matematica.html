@@ -42,6 +42,10 @@
       line-height: 1.55;
       color: #1e293b;
     }
+    .contract-paper p {
+      text-align: justify;
+      text-justify: inter-word;
+    }
     .field-highlight {
       background-color: rgba(24, 58, 108, 0.07);
       border-bottom: 1px dashed rgba(24, 58, 108, 0.35);
@@ -1144,6 +1148,30 @@
         y += 4.5;
       }
 
+      function drawJustifiedLine(lineText, x, yPos, maxWidth, isLastLine) {
+        var trimmed = String(lineText || '').trim();
+        if (!trimmed) return;
+        var words = trimmed.split(/\s+/);
+        if (isLastLine || words.length <= 1) {
+          doc.text(trimmed, x, yPos);
+          return;
+        }
+        var totalWordsWidth = 0;
+        for (var w = 0; w < words.length; w++) {
+          totalWordsWidth += doc.getTextWidth(words[w]);
+        }
+        var gap = (maxWidth - totalWordsWidth) / (words.length - 1);
+        if (gap <= 0 || gap > 12) {
+          doc.text(trimmed, x, yPos);
+          return;
+        }
+        var cursorX = x;
+        for (var j = 0; j < words.length; j++) {
+          doc.text(words[j], cursorX, yPos);
+          cursorX += doc.getTextWidth(words[j]) + gap;
+        }
+      }
+
       function writeParagraph(text, isBoldPrefix) {
         doc.setFont('times', 'normal');
         doc.setFontSize(9.6);
@@ -1152,7 +1180,8 @@
         var lineH = 4.25;
         checkPageBreak(lines.length * lineH + 2);
         for (var i = 0; i < lines.length; i++) {
-          doc.text(lines[i], marginL, y);
+          var isLast = (i === lines.length - 1);
+          drawJustifiedLine(lines[i], marginL, y, contentW, isLast);
           y += lineH;
         }
         y += 1.6;
